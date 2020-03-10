@@ -4,8 +4,6 @@
  *      Project: Z055_HDLC Linux native driver with IP/PPP stack integration
  *
  *      \author: christian.schuster@men.de
- *        $Date: 2005/05/30 14:35:24 $
- *    $Revision: 1.3 $
  *
  *       \brief  Linux native device driver for MEN Z055_HDLC FPGA core
  *
@@ -24,28 +22,8 @@
  *     Required:  -
  *     Switches:  -
  *
- * $Id: z055_hdlc_drv.c,v 1.3 2005/05/30 14:35:24 cs Exp $
- *---------------------------[ Public Functions ]----------------------------
- *
- *-------------------------------[ History ]---------------------------------
- *
- * $Log: z055_hdlc_drv.c,v $
- * Revision 1.3  2005/05/30 14:35:24  cs
- * (AUTOCI) Checkin due to new revision 1.1 of fileset ART/13Z055-90/13Z055-90
- *
- * Revision 1.2  2005/05/30 14:19:49  cs
- * cosmetics/documentation
- *
- * Revision 1.1  2005/02/15 14:36:24  cs
- * Initial Revision
- *
- * Revision 1.1  2005/02/15 14:15:24  cs
- * Initial Revision
- *
- *
- *
  *---------------------------------------------------------------------------
- * (c) Copyright 2004 by MEN mikro elektronik GmbH, Nuernberg, Germany
+ * Copyright 2004-2020, MEN Mikro Elektronik GmbH, Nuernberg, Germany
  ****************************************************************************/
 
 #define VERSION(ver,rel,seq) (((ver)<<16) | ((rel)<<8) | (seq))

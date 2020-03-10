@@ -4,7 +4,6 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin
 # Sample script to activate PPP connection using a Z055_HDLC adapter
 # and the pppd program.
 #
-# $Id: start-ppp.sh,v 1.1 2005/02/15 14:36:19 cs Exp $
 #
 # This script does not use PAP or CHAP authorization. Refer to
 # the pppd documentation for details on authorization.

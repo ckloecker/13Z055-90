@@ -7,33 +7,17 @@
  *         \file z055_hdlc_util.c
  *
  *       \author Christian.Schuster@men.de
- *        $Date: 2005/02/15 14:36:27 $
- *    $Revision: 1.1 $
  *
  *       \brief  Tool for setting up Z055_HDLC hardware and driver
  *               The program parses the command line options and issues the
  *               necessary IOCTL call(s) to the driver.
  *
  *     \switches (none)
- */
- /*-------------------------------[ History ]--------------------------------
- *
- * $Log: z055_hdlc_util.c,v $
- * Revision 1.1  2005/02/15 14:36:27  cs
- * Initial Revision
- *
- * Revision 1.1  2005/02/15 14:15:27  cs
- * Initial Revision
- *
- * Revision 1.1  2005/02/15 09:25:37  cs
- * Initial Revision
- *
  *
  *---------------------------------------------------------------------------
- * (c) Copyright 2004 by MEN mikro elektronik GmbH, Nuernberg, Germany
+ * Copyright 2004-2020, MEN Mikro Elektronik GmbH, Nuernberg, Germany
  ****************************************************************************/
 
-static const char RCSid[]="$Id: z055_hdlc_util.c,v 1.1 2005/02/15 14:36:27 cs Exp $";
 
 #include <stdlib.h>
 #include <fcntl.h>

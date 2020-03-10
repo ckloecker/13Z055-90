@@ -3,8 +3,6 @@
  *        \file  z055_hdlc.h
  *
  *      \author  Christian.Schuster@men.de
- *        $Date: 2005/02/15 14:36:30 $
- *    $Revision: 2.1 $
  *
  *       \brief  Header file for Z055_HDLC linux driver
  *               containing driver specific IOCTL codes,
@@ -12,19 +10,8 @@
  *               configuring driver and hardware
  *
  *    \switches  none
- *
- * $Id: z055_hdlc.h,v 2.1 2005/02/15 14:36:30 cs Exp $
- */
- /*-------------------------------[ History ]--------------------------------
- *
- * $Log: z055_hdlc.h,v $
- * Revision 2.1  2005/02/15 14:36:30  cs
- * Initial Revision
- *
- *
- *
  *---------------------------------------------------------------------------
- * (c) Copyright 2004 by MEN mikro elektronik GmbH, Nuernberg, Germany
+ * Copyright 2004-2020, MEN Mikro Elektronik GmbH, Nuernberg, Germany
  ****************************************************************************/
 
 #ifndef _Z055_DRV_H_

@@ -1,27 +1,20 @@
 #**************************  M a k e f i l e ********************************
 #
 #         Author: cs
-#          $Date: 2005/02/15 14:36:28 $
-#      $Revision: 1.1 $
 #
 #    Description: Makefile definitions for the z055_hdlc_util program
 #
-#---------------------------------[ History ]---------------------------------
-#
-#   $Log: program.mak,v $
-#   Revision 1.1  2005/02/15 14:36:28  cs
-#   Initial Revision
-#
-#   Revision 1.1  2005/02/15 14:15:29  cs
-#   Initial Revision
-#
-#
 #
 #-----------------------------------------------------------------------------
-#   (c) Copyright 2004 by MEN mikro elektronik GmbH, Nuernberg, Germany
+# Copyright 2004-2020, MEN Mikro Elektronik GmbH, Nuernberg, Germany
 #*****************************************************************************
 
 MAK_NAME=z055_hdlc_util
+# the next line is updated during the MDIS installation
+STAMPED_REVISION="49bf2e6-dirty_2020-03-09"
+
+DEF_REVISION=MAK_REVISION=$(STAMPED_REVISION)
+MAK_SWITCH=$(SW_PREFIX)$(DEF_REVISION)
 
 MAK_LIBS= \
 

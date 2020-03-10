@@ -2,7 +2,6 @@
 
 # Sample script to load the Z055 HDLC device driver
 #
-# $Id: load-drivers.sh,v 1.1 2005/02/15 14:36:22 cs Exp $
 #
 # Set the device options and select which supporting drivers to load
 # by modifying the script variables below.

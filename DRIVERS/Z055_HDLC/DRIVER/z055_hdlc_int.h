@@ -3,29 +3,14 @@
  *        \file  z055_hdlc_int.h
  *
  *      \author  Christian.Schuster@men.de
- *        $Date: 2005/02/15 14:36:25 $
- *    $Revision: 1.1 $
  *
  *       \brief  Internal header file for Z055_HDLC linux driver
  *               containing driver internal defines, structures
  *
  *    \switches  none
  *
- * $Id: z055_hdlc_int.h,v 1.1 2005/02/15 14:36:25 cs Exp $
- */
- /*-------------------------------[ History ]--------------------------------
- *
- * $Log: z055_hdlc_int.h,v $
- * Revision 1.1  2005/02/15 14:36:25  cs
- * Initial Revision
- *
- * Revision 1.1  2005/02/15 14:15:25  cs
- * Initial Revision
- *
- *
- *
  *---------------------------------------------------------------------------
- * (c) Copyright 2004 by MEN mikro elektronik GmbH, Nuernberg, Germany
+ * Copyright 2004-2020, MEN Mikro Elektronik GmbH, Nuernberg, Germany
  ****************************************************************************/
 
 #ifndef _Z055_HDLC_INT_H_

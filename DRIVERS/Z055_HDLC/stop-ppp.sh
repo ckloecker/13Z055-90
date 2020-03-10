@@ -3,7 +3,6 @@
 # Sample script to deactivate PPP connection using a MEN Z055 adapter
 # and the pppd program.
 #
-# $Id: stop-ppp.sh,v 1.1 2005/02/15 14:36:20 cs Exp $
 
 # This is the network device name created by pppd.
 # If you have only one ppp connection leave this at ppp0.
