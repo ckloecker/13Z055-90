@@ -31,7 +31,9 @@
 #ifndef _Z055_HDLC_INT_H_
 #define _Z055_HDLC_INT_H_
 
-#include "MEN/z055_hdlc.h"
+#include <MEN/z055_hdlc.h>
+#include <MEN/men_typs.h>
+#include <MEN/maccess.h>
 #define Z055_HDLC_MAGIC 0x5401
 
 /*
@@ -86,29 +88,34 @@ struct Z055_STRUCT {
 	void	*if_ptr;	/* General purpose pointer (used by SPPP) */
 	int						magic;
 	int						flags;
-	int						count;		/* count of opens */
+
 	int						line;
 	int						hw_version;
-	unsigned short			close_delay;
-	unsigned short			closing_wait;	/* time to wait before closing */
 
 	struct Z055_ICOUNT	icount;
 
 	struct termios			normal_termios;
-
+#if LINUX_VERSION_CODE >= VERSION(2,6,27)
+	struct tty_port port;
+#else
 	struct tty_struct		*tty;
+	int									count;		/* count of opens */
+	unsigned short			close_delay;
+	unsigned short			closing_wait;	/* time to wait before closing */
+	int									blocked_open;	/* # of blocked opens */
+	wait_queue_head_t		open_wait;
+	wait_queue_head_t		close_wait;
+#endif
+
 	int						timeout;
 	int						x_char;		/* xon/xoff character */
-	int						blocked_open;	/* # of blocked opens */
+
 	u16						read_status_mask;
 	u16						ignore_status_mask;
 	unsigned char 			*xmit_buf;
 	int						xmit_head;
 	int						xmit_tail;
 	int						xmit_cnt;
-
-	wait_queue_head_t		open_wait;
-	wait_queue_head_t		close_wait;
 
 	wait_queue_head_t		status_event_wait_q;
 	wait_queue_head_t		event_wait_q;
@@ -152,7 +159,7 @@ struct Z055_STRUCT {
 	unsigned char bus;			/* expansion bus number (zero based) */
 	unsigned char function;		/* PCI device number */
 
-	unsigned int phys_base;		/* base address of adapter */
+	U_INT32_OR_64 phys_base;		/* base address of adapter */
 	unsigned int phys_addr_size;/* size of the I/O address range */
 	int addr_requested;			/* nonzero if I/O address requested */
 
@@ -186,6 +193,65 @@ struct Z055_STRUCT {
 
 	struct	_input_signal_events	input_signal_events;
 };
+
+/*
+ * define operators on tty values to decouple driver code from
+ * changing value locations of different kernel versions
+ */
+
+#if LINUX_VERSION_CODE >= VERSION(2,6,27)
+#define Z055_STRUCT_set_tty(info, a)          ((info)->port.tty = (a))
+#define Z055_STRUCT_get_tty(info)             ((info)->port.tty)
+#define Z055_STRUCT_ref_count(info)           ((info)->port.count)
+#define Z055_STRUCT_set_ref_count(info, a)    ((info)->port.count = (a))
+#define Z055_STRUCT_inc_ref_count(info)       ((info)->port.count++)
+#define Z055_STRUCT_dec_ref_count(info)       ((info)->port.count--)
+#define Z055_STRUCT_flags(info)               ((info)->port.flags)
+#define Z055_STRUCT_set_flags(info, a)        ((info)->port.flags |= (a))
+#define Z055_STRUCT_clear_flags(info, a)      ((info)->port.flags &= ~(a))
+#define Z055_STRUCT_open_wait_q(info)         ((info)->port.open_wait)
+#if LINUX_VERSION_CODE < VERSION(4,4,0) && !defined(RHEL_7_3_514)
+#define Z055_STRUCT_close_wait_q(info)               ((info)->port.close_wait)
+#endif
+#if LINUX_VERSION_CODE < VERSION(3,9,0)
+#define Z055_STRUCT_set_low_latency(info, a)  ((info)->port.tty->low_latency = (a))
+#else
+#define Z055_STRUCT_set_low_latency(info, a)  ((info)->port.low_latency = (a))
+#endif
+#define Z055_STRUCT_blocked_open(info)        ((info)->port.blocked_open)
+#define Z055_STRUCT_inc_blocked_open(info)    ((info)->port.blocked_open++)
+#define Z055_STRUCT_dec_blocked_open(info)    ((info)->port.blocked_open--)
+#define Z055_STRUCT_get_close_delay(info)     ((info)->port.close_delay)
+#define Z055_STRUCT_set_close_delay(info, a)  ((info)->port.close_delay = (a))
+#define Z055_STRUCT_get_closing_wait(info)    ((info)->port.closing_wait)
+#define Z055_STRUCT_set_closing_wait(info, a) ((info)->port.closing_wait = (a))
+#else
+#define Z055_STRUCT_set_tty(info, a)          ((info)->tty = (a))
+#define Z055_STRUCT_get_tty(info)             ((info)->tty)
+#define Z055_STRUCT_ref_count(info)           ((info)->count)
+#define Z055_STRUCT_set_ref_count(info, a)    ((info)->count = (a))
+#define Z055_STRUCT_inc_ref_count(info)       ((info)->count++)
+#define Z055_STRUCT_dec_ref_count(info)       ((info)->count--)
+#define Z055_STRUCT_flags(info)               ((info)->flags)
+#define Z055_STRUCT_set_flags(info, a)        ((info)->flags |= (a))
+#define Z055_STRUCT_clear_flags(info, a)      ((info)->flags &= ~(a))
+#define Z055_STRUCT_open_wait_q(info)         ((info)->open_wait)
+#define Z055_STRUCT_close_wait_q(info)        ((info)->close_wait)
+#define Z055_STRUCT_set_low_latency(info, a)  ((info)->tty->low_latency = (a))
+#define Z055_STRUCT_blocked_open(info)        ((info)->blocked_open)
+#define Z055_STRUCT_inc_blocked_open(info)    ((info)->blocked_open++)
+#define Z055_STRUCT_dec_blocked_open(info)    ((info)->blocked_open--)
+#define Z055_STRUCT_get_close_delay(info)     ((info)->close_delay)
+#define Z055_STRUCT_set_close_delay(info, a)  ((info)->close_delay = (a))
+#define Z055_STRUCT_get_closing_wait(info)    ((info)->closing_wait)
+#define Z055_STRUCT_set_closing_wait(info, a) ((info)->closing_wait = (a))
+#endif
+
+#if LINUX_VERSION_CODE < VERSION(3,7,0)
+#define tty_cflags(tty) ((tty)->termios->c_cflag)
+#else
+#define tty_cflags(tty) ((tty)->termios.c_cflag)
+#endif
 
 /*
  * These macros define the offsets used in calculating the
@@ -536,84 +602,11 @@ typedef volatile unsigned  __vu32;
               hw += 4;	\
           }             \
         }
-
-#else /* _PPC_IO_H */
-
+#else
 /************************************
  *         not PPC                  *
  ***********************************/
-
-#ifdef MAC_MEM_MAPPED
-
-typedef unsigned long MACCESS;         /* access pointer */
-
-#define MREAD_D8(ma,offs)			readb((MACCESS)(ma)+(offs))
-#define MREAD_D16(ma,offs)			readw((MACCESS)(ma)+(offs))
-#define MREAD_D32(ma,offs)			readl((MACCESS)(ma)+(offs))
-
-#define MWRITE_D8(ma,offs,val)		writeb(val,(MACCESS)(ma)+(offs))
-#define MWRITE_D16(ma,offs,val)		writew(val,(MACCESS)(ma)+(offs))
-#define MWRITE_D32(ma,offs,val)		writel(val,(MACCESS)(ma)+(offs))
-
-#define MBLOCK_READ_D32(ma,offs,size,dst) \
-        { int sz=size>>2;           \
-          u32 *mem=(u32 *)dst; \
-          unsigned long hw = (MACCESS)(ma)+(offs); \
-          while(sz--){ \
-			  *mem++ = readl( hw );\
-              hw += 4;	\
-          }             \
-        }
-
-#define MBLOCK_WRITE_D32(ma,offs,size,src) \
-        { int sz=(size)>>2;           \
-          u32 *mem=(u32 *)(src); \
-          unsigned long hw = (MACCESS)(ma)+(offs); \
-          while(sz--){ \
-              writel( *mem, hw );\
-              mem++; \
-              hw += 4;	\
-          }             \
-        }
-
-
-#else /* MAC_MEM_MAPPED */
-/*---- I/O mapped hardware ----*/
-typedef unsigned MACCESS;         /* access pointer */
-
-#define MREAD_D8(ma,offs)			inb((MACCESS)(ma)+(offs))
-#define MREAD_D16(ma,offs)			inw((MACCESS)(ma)+(offs))
-#define MREAD_D32(ma,offs)			inl((MACCESS)(ma)+(offs))
-
-#define MWRITE_D8(ma,offs,val)		outb(val,(MACCESS)(ma)+(offs))
-#define MWRITE_D16(ma,offs,val)		outw(val,(MACCESS)(ma)+(offs))
-#define MWRITE_D32(ma,offs,val)		outl(val,(MACCESS)(ma)+(offs))
-
-#define MBLOCK_READ_D32(ma,offs,size,dst) \
-        { int sz=size>>2;           \
-          u32 *mem=(u32 *)dst; \
-          unsigned long hw = (MACCESS)(ma)+(offs); \
-          while(sz--){ \
-			  *mem++ = inl( hw );\
-              hw += 4;	\
-          }             \
-        }
-
-#define MBLOCK_WRITE_D32(ma,offs,size,src) \
-        { int sz=size>>2;           \
-          u32 *mem=(u32 *)src; \
-          unsigned long hw = (MACCESS)(ma)+(offs); \
-          while(sz--){ \
-              outl( *mem, hw );\
-              mem++; \
-              hw += 4;	\
-          }             \
-        }
-
-#endif	/* MAC_MEM_MAPPED */
-
-
-#endif  /* _PPC_IO_H */
+#endif
 
 #define Z055_ADDR_SIZE	0x3000		/* mem size to request for device */
 
