@@ -54,6 +54,12 @@
 #define TRUE 1
 #define FALSE 0
 
+#if LINUX_VERSION_CODE < VERSION(3,7,0)
+#define tty_cflags(tty) ((tty)->termios->c_cflag)
+#else
+#define tty_cflags(tty) ((tty)->termios.c_cflag)
+#endif
+
 /* The queue of BH actions to be performed */
 #define BH_RECEIVE  1
 #define BH_TRANSMIT 2

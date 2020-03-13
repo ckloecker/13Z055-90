@@ -80,7 +80,10 @@
 #include <linux/delay.h>
 #include <linux/ioctl.h>
 
+#if LINUX_VERSION_CODE < VERSION(3,4,0)
 #include <asm/system.h>
+#endif
+
 #include <asm/io.h>
 #include <asm/irq.h>
 #include <asm/bitops.h>
@@ -181,7 +184,11 @@ void z055_hw_set_sdlc_mode( struct Z055_STRUCT *info );
 
 void z055_hw_loopback_frame( struct Z055_STRUCT *info );
 
+#if LINUX_VERSION_CODE < VERSION(4,15,0)
 void z055_tx_timeout(unsigned long context);
+#else
+void z055_tx_timeout(struct timer_list *t);
+#endif
 
 int z055_ioctl_common(struct Z055_STRUCT *info, unsigned int cmd, unsigned long arg);
 
@@ -259,9 +266,14 @@ static int z055_hw_set_modem_info( struct Z055_STRUCT *info,
 								   unsigned int clear);
 static unsigned int z055_hw_get_modem_info(struct Z055_STRUCT * info);
 #else
+#if LINUX_VERSION_CODE < VERSION(2,6,39)
 static int tiocmget(struct tty_struct *tty, struct file *file);
 static int tiocmset(struct tty_struct *tty, struct file *file,
 					unsigned int set, unsigned int clear);
+#else
+static int tiocmget(struct tty_struct *tty);
+static int tiocmset(struct tty_struct *tty, unsigned int set, unsigned int clear);
+#endif
 #endif /* #if   LINUX_VERSION_CODE < VERSION(2,6,0) */
 static int z055_get_stats(struct Z055_STRUCT *info,
 						  struct Z055_ICOUNT *user_icount);
@@ -380,7 +392,9 @@ void* z055_get_text_ptr() {return z055_get_text_ptr;}
  * memory if large numbers of serial ports are open.
  */
 static unsigned char *G_tmp_buf;
+#if LINUX_VERSION_CODE < VERSION(2,6,10)
 static DECLARE_MUTEX(G_tmp_buf_sem);
+#endif
 
 static inline int z055_paranoia_check(struct    Z055_STRUCT *info,
 #if LINUX_VERSION_CODE < VERSION(2,6,0)
@@ -994,9 +1008,14 @@ static int startup(struct Z055_STRUCT * info)
 
 	info->pending_bh = 0;
 
+#if LINUX_VERSION_CODE < VERSION(4,15,0)
 	init_timer(&info->tx_timer);
 	info->tx_timer.data = (unsigned long)info;
 	info->tx_timer.function = z055_tx_timeout;
+#else
+	timer_setup(&info->tx_timer, z055_tx_timeout, 0);
+#endif
+
 
 	/* Allocate and claim adapter resources */
 	retval = z055_claim_resources(info);
@@ -1884,20 +1903,27 @@ static int z055_hw_set_modem_info(struct Z055_STRUCT * info,
 #if LINUX_VERSION_CODE >= VERSION(2,6,0)
 /* return the state of the serial control and status signals
  */
+#if LINUX_VERSION_CODE < VERSION(2,6,39)
 static int tiocmget(struct tty_struct *tty, struct file *file)
+#else
+static int tiocmget(struct tty_struct *tty)
+#endif
 {
 	return(z055_hw_get_modem_info((struct Z055_STRUCT *)tty->driver_data));
 }
 
 /* set modem control signals (DTR/RTS)
  */
+#if LINUX_VERSION_CODE < VERSION(2,6,39)
 static int tiocmset(struct tty_struct *tty, struct file *file,
 			unsigned int set, unsigned int clear)
+#else
+static int tiocmset(struct tty_struct *tty, unsigned int set, unsigned int clear)
+#endif
 {
 	return z055_hw_set_modem_info((struct Z055_STRUCT *)tty->driver_data,
 									 set, clear);
 }
-
 #endif /* #if   LINUX_VERSION_CODE < VERSION(2,6,0) */
 
 /* z055_break()     Set or clear transmit break condition
@@ -1960,10 +1986,14 @@ static int  z055_break(struct tty_struct *tty, int break_state)
  *
  * Return Value:    0 if success, otherwise error code
  */
+#if LINUX_VERSION_CODE < VERSION(2,6,39)
 static int z055_ioctl(struct tty_struct *tty,
 					  struct file * file,
 					  unsigned int cmd,
 					  unsigned long arg)
+#else
+static int z055_ioctl(struct tty_struct *tty, unsigned int cmd, unsigned long arg)
+#endif
 {
 	struct Z055_STRUCT *info = (struct Z055_STRUCT *)tty->driver_data;
 
@@ -2107,17 +2137,12 @@ static void z055_set_termios(struct tty_struct *tty, struct ktermios *old_termio
 	unsigned long flags;
 
 	if (debug_level & DEBUG_LEVEL_INFO)
-		printk( "%s(%d): %s c_cflag=0x%08x; rel c_iflag=0x%08x\n",
-				__FUNCTION__,__LINE__,
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-				tty->driver.name,
-#else
-				tty->driver->name,
-#endif
-				tty->termios->c_cflag, RELEVANT_IFLAG(tty->termios->c_iflag));
+		printk( "%s(%d): %s",
+				__FUNCTION__,__LINE__, tty->driver->name);
+
 	/* just return if nothing has changed */
-	if ((tty->termios->c_cflag == old_termios->c_cflag)
-		&& (RELEVANT_IFLAG(tty->termios->c_iflag)
+	if ((tty_cflags(tty) == old_termios->c_cflag)
+		&& (RELEVANT_IFLAG(tty_cflags(tty))
 		== RELEVANT_IFLAG(old_termios->c_iflag)))
 		return;
 
@@ -2125,7 +2150,7 @@ static void z055_set_termios(struct tty_struct *tty, struct ktermios *old_termio
 
 	/* Handle transition to B0 status */
 	if (old_termios->c_cflag & CBAUD &&
-		!(tty->termios->c_cflag & CBAUD)) {
+		!(tty_cflags(tty) & CBAUD)) {
 		info->serial_signals &= ~(SerialSignal_RTS + SerialSignal_DTR);
 		spin_lock_irqsave(&info->irq_spinlock,flags);
 		z055_hw_set_serial_signals(info);
@@ -2134,9 +2159,9 @@ static void z055_set_termios(struct tty_struct *tty, struct ktermios *old_termio
 
 	/* Handle transition away from B0 status */
 	if (!(old_termios->c_cflag & CBAUD) &&
-		tty->termios->c_cflag & CBAUD) {
+		tty_cflags(tty) & CBAUD) {
 		info->serial_signals |= SerialSignal_DTR;
-		if (!(tty->termios->c_cflag & CRTSCTS) ||
+		if (!(tty_cflags(tty) & CRTSCTS) ||
 			!test_bit(TTY_THROTTLED, &tty->flags)) {
 			info->serial_signals |= SerialSignal_RTS;
 		}
@@ -2147,7 +2172,7 @@ static void z055_set_termios(struct tty_struct *tty, struct ktermios *old_termio
 
 	/* Handle turning off CRTSCTS */
 	if (old_termios->c_cflag & CRTSCTS &&
-		!(tty->termios->c_cflag & CRTSCTS)) {
+		!(tty_cflags(tty) & CRTSCTS)) {
 		tty->hw_stopped = 0;
 		z055_start(tty);
 	}
@@ -3871,9 +3896,16 @@ void z055_trace_block(struct Z055_STRUCT *info, const char* data, int count, int
  * Arguments:   context     pointer to device instance data
  * Return Value:    None
  */
+
+#if LINUX_VERSION_CODE < VERSION(4,15,0)
 void z055_tx_timeout(unsigned long context)
 {
-	struct Z055_STRUCT *info    = (struct Z055_STRUCT*)context;
+	struct Z055_STRUCT *info = (struct Z055_STRUCT*)context;
+#else
+void z055_tx_timeout(struct timer_list *t)
+{
+	struct Z055_STRUCT *info = from_timer(info, t, tx_timer);
+#endif
 	unsigned long flags;
 
 	if ( debug_level & DEBUG_LEVEL_INFO )
@@ -3892,8 +3924,11 @@ void z055_tx_timeout(unsigned long context)
 
 }   /* end of z055_tx_timeout() */
 
-
+#if LINUX_VERSION_CODE < VERSION(3,8,0)
 static int __devinit z055_init_one (CHAMELEON_UNIT_T *chu)
+#else
+static int z055_init_one (CHAMELEON_UNIT_T *chu)
+#endif
 {
 	struct Z055_STRUCT *info;
 	int ioMapped = 0;
@@ -3956,7 +3991,11 @@ static int __devinit z055_init_one (CHAMELEON_UNIT_T *chu)
 	return 0;
 }
 
-static int  __devexit z055_remove_one (CHAMELEON_UNIT_T *chu)
+#if LINUX_VERSION_CODE < VERSION(3,8,0)
+static int __devexit z055_remove_one (CHAMELEON_UNIT_T *chu)
+#else
+static int z055_remove_one (CHAMELEON_UNIT_T *chu)
+#endif
 {
 	return 0;
 }
