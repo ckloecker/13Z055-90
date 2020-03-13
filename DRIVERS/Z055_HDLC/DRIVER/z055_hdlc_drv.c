@@ -304,11 +304,20 @@ static int debug_level;
 static int maxframe[Z055_MAX_DEVICES];
 static int num_rxbufs[Z055_MAX_DEVICES];
 
-module_param(break_on_load,int,0664);
-module_param(ttymajor,int,0664);
-module_param(debug_level,int,0664);
-module_param(maxframe,int,0664);
-module_param(num_rxbufs,int,0664);
+#if LINUX_VERSION_CODE > VERSION(2,6,9)
+module_param(break_on_load,int,0);
+module_param(ttymajor,int,0);
+module_param(debug_level,int,0);
+module_param_array(maxframe, int, NULL, 0);
+module_param_array(num_rxbufs, int, NULL, 0);
+#else
+MODULE_PARM(break_on_load,"i");
+MODULE_PARM(ttymajor,"i");
+MODULE_PARM(debug_level,"i");
+MODULE_PARM(maxframe,"1-"   __MODULE_STRING(Z055_MAX_DEVICES) "i");
+MODULE_PARM(num_rxbufs,"1-" __MODULE_STRING(Z055_MAX_DEVICES) "i");
+#endif
+
 MODULE_PARM_DESC(break_on_load, "flag, set breakpoint on module load");
 MODULE_PARM_DESC(ttymajor,  "tty driver major number");
 MODULE_PARM_DESC(debug_level,   "drivers debug level");
