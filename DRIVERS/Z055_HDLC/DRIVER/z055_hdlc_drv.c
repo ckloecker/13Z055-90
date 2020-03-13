@@ -22,6 +22,7 @@
  *     Required:  -
  *     Switches:  -
  *
+ *
  *---------------------------------------------------------------------------
  * Copyright 2004-2020, MEN Mikro Elektronik GmbH, Nuernberg, Germany
  ****************************************************************************/
@@ -121,17 +122,9 @@ Z055_PARAMS G_default_params    = {
 	0xff,                           /* unsigned char addr_mask */
 	0xff,                           /* unsigned char broadc_mask */
 	HDLC_CRC_CCITT,                 /* unsigned char crc_mode */
-	HDLC_PREAMBLE_PATTERN_NONE      /* unsigned char preamble */
+	HDLC_PREAMBLE_PATTERN_NONE,     /* unsigned char preamble */
+	HDLC_FULL_DUPLEX                /* unsigned char half_duplex */
 };
-
-
-/* The queue of BH actions to be performed */
-
-#define BH_RECEIVE  1
-#define BH_TRANSMIT 2
-#define BH_STATUS   4
-
-#define RELEVANT_IFLAG(iflag) (iflag & (IGNBRK|BRKINT|IGNPAR|PARMRK|INPCK))
 
 void z055_hw_DisableMasterIrqBit( struct Z055_STRUCT *info );
 void z055_hw_EnableMasterIrqBit( struct Z055_STRUCT *info    );
@@ -286,7 +279,7 @@ static int z055_wait_event(struct Z055_STRUCT *info, int *mask);
 #define jiffies_from_ms(a) ((((a) * HZ)/1000)+1)
 
 /*
- * Global linked list of SyncLink devices
+ * Global linked list of Z55 devices
  */
 struct Z055_STRUCT *G_z055_device_list;
 static int G_z055_device_count;
@@ -2856,8 +2849,8 @@ int z055_claim_resources(struct Z055_STRUCT *info)
 				info->phys_base, info->phys_addr_size);
 
 	if (request_mem_region(info->phys_base,info->phys_addr_size,"men_z055") == NULL) {
-		printk( "%s(%d): mem addr conflict device %s Addr=%08X\n",
-				__FUNCTION__, __LINE__, info->device_name, info->phys_base);
+		printk( "%s(%d): mem addr conflict device %s Addr=%p, size=%p\n",
+				__FUNCTION__, __LINE__, info->device_name, info->phys_base,info->phys_addr_size);
 		goto errout;
 	}
 	info->addr_requested = 1;
@@ -3245,6 +3238,7 @@ void z055_hw_set_sdlc_mode( struct Z055_STRUCT *info )
 	case HDLC_ENCODING_NRZI:            RegValue = Z055_CDR_NRZI;       break;
 	case HDLC_ENCODING_MANCHESTER:      RegValue = Z055_CDR_MAN;        break;
 	case HDLC_ENCODING_MANCHESTER_NRZI: RegValue = Z055_CDR_NRZI_MAN;   break;
+	case HDLC_ENCODING_NRZI_S:          RegValue = Z055_CDR_NRZS;       break;
 	default:                            RegValue = Z055_CDR_NRZ;        break;
 	}
 	Z055_OUTREG( info, Z055_CDR, RegValue );
@@ -3670,6 +3664,11 @@ void z055_hw_set_serial_signals(    struct Z055_STRUCT *info    )
 	else
 		Control &= ~(Z055_HSCR_DTR);
 
+	if ( info->params.half_duplex == HDLC_HALF_DUPLEX )
+		Control |= Z055_HSCR_HDX;
+	else
+		Control &= ~(Z055_HSCR_HDX);
+
 	Z055_OUTREG( info, Z055_HSCR, Control );
 
 }   /* end of z055_hw_set_serial_signals() */
@@ -3927,7 +3926,12 @@ static int __devinit z055_init_one (CHAMELEON_UNIT_T *chu)
 	 */
 	info->ma_offs = info->phys_base & (PAGE_SIZE-1);
 	info->phys_base &= ~(PAGE_SIZE-1);
-	info->phys_addr_size = ((Z055_ADDR_SIZE / PAGE_SIZE) + 1) * PAGE_SIZE;
+	info->phys_addr_size = ((Z055_ADDR_SIZE / PAGE_SIZE)) * PAGE_SIZE;
+
+	/* in case the size is not multiple PAGE_SIZE get sufficient space */
+	if( 0 != (Z055_ADDR_SIZE % PAGE_SIZE) ) {
+		info->phys_addr_size += PAGE_SIZE;
+	}
 
 #else
 	if( !ioMapped ) {
@@ -3947,3 +3951,4 @@ static int  __devexit z055_remove_one (CHAMELEON_UNIT_T *chu)
 {
 	return 0;
 }
+

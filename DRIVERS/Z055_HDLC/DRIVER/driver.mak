@@ -20,7 +20,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-MAK_NAME=z055_hdlc
+MAK_NAME=lx_z055
 # the next line is updated during the MDIS installation
 STAMPED_REVISION="49bf2e6-dirty_2020-03-09"
 
