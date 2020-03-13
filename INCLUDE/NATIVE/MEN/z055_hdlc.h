@@ -48,9 +48,6 @@
 #define HDLC_FLAG_TXC_DTRPIN		0x2000
 #define HDLC_FLAG_TXC_RTSPIN		0x0000
 #define HDLC_FLAG_HDLC_LOOPBACK	0x4000
-#define HDLC_FULL_DUPLEX		0x5000 //dummy value
-#define HDLC_HALF_DUPLEX		0x6000 //dummy value
-
 
 #define HDLC_CRC_16			0x0000
 #define HDLC_CRC_CCITT		0x0001
@@ -82,6 +79,9 @@
 #define Z055_MODE_HDLC		2
 
 #define Z055_BUS_TYPE_PCI	1
+
+#define HDLC_FULL_DUPLEX	0
+#define HDLC_HALF_DUPLEX	1
 
 typedef struct _Z055_PARAMS
 {
