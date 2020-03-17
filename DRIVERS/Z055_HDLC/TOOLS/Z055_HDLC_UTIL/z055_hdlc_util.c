@@ -444,7 +444,6 @@ int apply_params(char *devname, Z055_PARAMS* params)
 	struct ifreq ifr;
 	int sock;
 	int devnum;
-	int portnum;
 
 	/* open the specified device */
 	fd = open(devname,O_NONBLOCK,0);
@@ -471,7 +470,6 @@ int apply_params(char *devname, Z055_PARAMS* params)
 		return 0;
 	}
 	do {
-		portnum = -1;
 		if (sscanf(devname,"/dev/ttyTH%d",&devnum) == 1 ) {
 			sprintf(ifr.ifr_ifrn.ifrn_name, "z055%d", devnum);
 			break;

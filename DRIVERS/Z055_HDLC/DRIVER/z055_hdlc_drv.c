@@ -3125,7 +3125,7 @@ int z055_init_tty()
 	G_serial_driver->ops = &ops;
 #endif /* #if   LINUX_VERSION_CODE < VERSION(2,6,0) */
 
-	G_serial_driver->driver_name = "men_z055_hdlc";
+	G_serial_driver->driver_name = "men_lx_z055";
 	G_serial_driver->name = "ttyTH";
 	G_serial_driver->major = ttymajor;
 	G_serial_driver->minor_start = 64;

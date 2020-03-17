@@ -189,7 +189,7 @@ load_and_mknode() {
 # load drivers
 #--------------------------------------------------------------------------
 
-load_and_mknode men_z055_hdlc ttyTH 2
+load_and_mknode men_lx_z055 ttyTH 2
 
 exit 0;
 
