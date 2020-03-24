@@ -191,6 +191,7 @@ void z055_tx_timeout(struct timer_list *t);
 #endif
 
 int z055_ioctl_common(struct Z055_STRUCT *info, unsigned int cmd, unsigned long arg);
+static int z055_tty_install(struct tty_driver *driver, struct tty_struct *tty);
 
 static unsigned int z055_hw_get_modem_info(struct Z055_STRUCT * info);
 
@@ -993,7 +994,7 @@ static int startup(struct Z055_STRUCT * info)
 		printk( "%s(%d): %s\n",
 				__FUNCTION__, __LINE__, info->device_name);
 
-	if (info->flags & ASYNC_INITIALIZED)
+	if (Z055_STRUCT_flags(info) & ASYNC_INITIALIZED)
 		return 0;
 
 	if (!info->xmit_buf) {
@@ -1007,6 +1008,8 @@ static int startup(struct Z055_STRUCT * info)
 	}
 
 	info->pending_bh = 0;
+
+	memset(&info->icount, 0, sizeof(info->icount));
 
 #if LINUX_VERSION_CODE < VERSION(4,15,0)
 	init_timer(&info->tx_timer);
@@ -1995,7 +1998,7 @@ static int z055_ioctl(struct tty_struct *tty,
 static int z055_ioctl(struct tty_struct *tty, unsigned int cmd, unsigned long arg)
 #endif
 {
-	struct Z055_STRUCT *info = (struct Z055_STRUCT *)tty->driver_data;
+	struct Z055_STRUCT *info = tty->driver_data;
 
 	if (debug_level & DEBUG_LEVEL_INFO)
 		printk( "%s(%d): %s cmd=%08X\n",
@@ -2114,6 +2117,18 @@ int z055_ioctl_common(struct Z055_STRUCT *info,
 			return -ENOIOCTLCMD;
 	}
 	return 0;
+}
+
+#if LINUX_VERSION_CODE < VERSION(2,6,39)
+static long z055_compat_ioctl(struct tty_struct *tty, struct file *file,
+			 unsigned int cmd, unsigned long arg)
+#else
+static long z055_compat_ioctl(struct tty_struct *tty,
+			 unsigned int cmd, unsigned long arg)
+#endif
+{
+	int rc = -ENOIOCTLCMD;
+	return rc;
 }
 
 /* z055_set_termios()
@@ -2530,6 +2545,47 @@ static int block_til_ready(struct tty_struct *tty, struct file * filp,
 
 }   /* end of block_til_ready() */
 
+
+static int z055_tty_install(struct tty_driver *driver, struct tty_struct *tty)
+{
+	struct Z055_STRUCT *info;
+	int line;
+	/* find device instance with matching line number */
+	info = G_z055_device_list;
+
+	/* verify range of specified line number */
+#if LINUX_VERSION_CODE < VERSION(2,6,0)
+	line = MINOR(tty->device) - tty->driver.minor_start;
+#else
+	line = tty->index;
+#endif
+
+	while(info && info->line != line) {
+		info = info->next_device;
+	}
+
+	if (!info) {
+		printk( "%s(%d):%s: tty line #%d not found\n",
+				__FUNCTION__, __LINE__,G_driver_name, line);
+		return -ENODEV;
+	}
+
+	if (info->init_error) {
+		printk( "%s(%d): %s init error=%d\n",
+				__FUNCTION__, __LINE__, info->device_name, info->init_error);
+		return -ENODEV;
+	}
+
+	tty->driver_data = info;
+
+#if LINUX_VERSION_CODE < VERSION(3,7,0)
+	return 0;
+#else
+	printk( "tty_port_install\n");
+	return tty_port_install(&info->port, driver, tty);
+#endif
+}
+
 /* z055_open()
  *
  *  Called when a port is opened.  Init and enable port.
@@ -2557,6 +2613,13 @@ static int z055_open(struct tty_struct *tty, struct file * filp)
 				__FUNCTION__, __LINE__, line);
 		return -ENODEV;
 	}
+
+#if LINUX_VERSION_CODE < VERSION(3,7,0)
+	/* this is called from tty layer starting with 3.7 kernels */
+	retval = z055_tty_install(serial_driver, tty);
+	if (retval)
+		return retval;
+#endif
 
 	/* find the info structure for the specified line */
 	info = G_z055_device_list;
@@ -2656,6 +2719,10 @@ cleanup:
  * /proc fs routines....
  */
 
+#if LINUX_VERSION_CODE < VERSION(2,6,30)
+/*
+ * proc fs support
+ */
 static inline int line_info(char *buf, struct Z055_STRUCT *info)
 {
 	char stat_buf[30];
@@ -2664,7 +2731,7 @@ static inline int line_info(char *buf, struct Z055_STRUCT *info)
 
 	if (debug_level & DEBUG_LEVEL_INFO)
 		printk( "%s(%d): %s\n",
-			 	__FUNCTION__, __LINE__, info->device_name);
+				__FUNCTION__, __LINE__, info->device_name);
 
 	if (info->bus_type == Z055_BUS_TYPE_PCI)    {
 		if( !info->ma_base ) {
@@ -2786,6 +2853,121 @@ done:
 
 }   /* end of z055_read_proc() */
 
+#else
+static inline void line_info(struct seq_file *m, struct Z055_STRUCT *info)
+{
+	char stat_buf[30];
+	unsigned long flags;
+
+	if (debug_level & DEBUG_LEVEL_INFO)
+		printk( "%s(%d): %s\n",
+			 	__FUNCTION__, __LINE__, info->device_name);
+
+	if (info->bus_type == Z055_BUS_TYPE_PCI)    {
+		if( !info->ma_base ) {
+			seq_printf( m, "%s: Device not opened yet ==> "
+								"no ressources claimed\n",
+						   info->device_name);
+		}
+		seq_printf( m, "%s: PCI ma_base:%04X irq:%d\n",
+					info->device_name, info->ma_base + info->ma_offs, info->irq);
+	}
+
+	/* output current serial signal states */
+	spin_lock_irqsave(&info->irq_spinlock,flags);
+	z055_hw_get_serial_signals(info);
+	spin_unlock_irqrestore(&info->irq_spinlock,flags);
+
+	stat_buf[0] = 0;
+	stat_buf[1] = 0;
+	if (info->serial_signals & SerialSignal_RTS)
+		strcat(stat_buf, "|RTS");
+	if (info->serial_signals & SerialSignal_CTS)
+		strcat(stat_buf, "|CTS");
+	if (info->serial_signals & SerialSignal_DTR)
+		strcat(stat_buf, "|DTR");
+	if (info->serial_signals & SerialSignal_DSR)
+		strcat(stat_buf, "|DSR");
+
+	if (info->params.mode == Z055_MODE_HDLC ) {
+		seq_printf( m, " HDLC txok:%d rxok:%d",
+				info->icount.txok, info->icount.rxok);
+		if (info->icount.rxrcst)
+			seq_printf( m, " rxrcst:%d", info->icount.rxrcst);
+		if (info->icount.rxlong)
+			seq_printf( m, " rxlong:%d", info->icount.rxlong);
+		if (info->icount.rxbover)
+			seq_printf( m, " rxbover:%d", info->icount.rxbover);
+		if (info->icount.rxcrc)
+			seq_printf( m, " rxcrc:%d", info->icount.rxcrc);
+		if (info->icount.rxcrc)
+			seq_printf( m, " rxabort:%d", info->icount.rxabort);
+	}
+	/* Append serial signal status to end */
+	seq_printf( m, " %s\n", stat_buf+1);
+
+	spin_lock_irqsave(&info->irq_spinlock,flags);
+	{
+		u16 hcr		= Z055_INREG( info, Z055_HCR );
+		u16 cdr		= Z055_INREG( info, Z055_CDR );
+		u16 acr		= Z055_INREG( info, Z055_ACR );
+		u16 amr		= Z055_INREG( info, Z055_AMR );
+		u16 bcl		= Z055_INREG( info, Z055_BCL );
+		u16 bch		= Z055_INREG( info, Z055_BCH );
+		u16 bcr		= Z055_INREG( info, Z055_BCR );
+		u16 ier		= Z055_INREG( info, Z055_IER );
+		u16 irqr	= Z055_INREG( info, Z055_IRQR );
+		u16 hscr 	= Z055_INREG( info, Z055_HSCR );
+		u16 hssr	= Z055_INREG( info, Z055_HSSR );
+		u16 txszr	= Z055_INREG( info, Z055_TXSZR );
+		u16 rxszr	= Z055_INREG( info, Z055_RXSZR );
+		seq_printf( m, "hcr  =%04X cdr =%04X acr  =%04X amr=%04X\n"
+								 "bcl  =%04X bch =%04X bcr  =%04X\n"
+								 "ier  =%04X irqr=%04X hscr =%04X hssr=%04X\n"
+								 "txszr= %04X          rxszr=%04X\n",
+						hcr, cdr, acr, amr, bcl, bch, bcr,
+						ier, irqr, hscr, hssr, txszr, rxszr );
+	}
+	seq_printf( m, "txactive=%d bh_req=%d  bh_run=%d   pending_bh=%x\n",
+					info->tx_active,info->bh_requested,info->bh_running,
+					info->pending_bh);
+
+	spin_unlock_irqrestore(&info->irq_spinlock,flags);
+
+}   /* end of line_info() */
+
+/* Called to print information about devices
+ */
+static int z055_proc_show(struct seq_file *m, void *v)
+{
+	struct Z055_STRUCT *info;
+
+	seq_puts(m, "z055_hdlc driver\n");
+
+	info = G_z055_device_list;
+	while( info ) {
+		line_info(m, info);
+		info = info->next_device;
+	}
+	return 0;
+}
+
+#if LINUX_VERSION_CODE < VERSION(4,18,0)
+static int z055_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, z055_proc_show, NULL);
+}
+
+static const struct file_operations z055_proc_fops = {
+	.owner		= THIS_MODULE,
+	.open		= z055_proc_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+#endif // linux version < 4.18
+#endif // linux version < 2.6.30
+
 /*
  * z055_alloc_rtxbuffer_memory()
  *
@@ -2889,7 +3071,12 @@ int z055_claim_resources(struct Z055_STRUCT *info)
 	}
 	info->addr_requested = 1;
 
-	info->ma_base = ioremap(info->phys_base,info->phys_addr_size);
+#if LINUX_VERSION_CODE < VERSION(2,6,26)
+	info->ma_base = ioremap(info->phys_base, info->phys_addr_size);
+#else
+	info->ma_base = ioremap_nocache(info->phys_base, info->phys_addr_size);
+#endif
+
 	if (!info->ma_base) {
 		printk( "%s(%d): Can't map shared memory on device %s MemAddr=%08X\n",
 				__FUNCTION__, __LINE__, info->device_name, info->phys_base );
@@ -3070,6 +3257,9 @@ struct Z055_STRUCT* z055_allocate_device()
 }   /* end of z055_allocate_device()*/
 
 static struct tty_operations ops = {
+#if LINUX_VERSION_CODE >= VERSION(3,7,0)
+	.install = z055_tty_install,
+#endif
 	.tiocmget = tiocmget,
 	.tiocmset = tiocmset,
 	.open = z055_open,
@@ -3081,16 +3271,27 @@ static struct tty_operations ops = {
 	.chars_in_buffer = z055_chars_in_buffer,
 	.flush_buffer = z055_flush_buffer,
 	.ioctl = z055_ioctl,
+#if LINUX_VERSION_CODE > VERSION(2,6,21)
+	.compat_ioctl = z055_compat_ioctl,
+#endif
 	.throttle = z055_throttle,
 	.unthrottle = z055_unthrottle,
 	.send_xchar = z055_send_xchar,
 	.break_ctl = z055_break,
 	.wait_until_sent = z055_wait_until_sent,
-//	.read_proc = z055_read_proc,
 	.set_termios = z055_set_termios,
 	.stop = z055_stop,
 	.start = z055_start,
 	.hangup = z055_hangup,
+#if LINUX_VERSION_CODE > VERSION(2,6,29)
+#if LINUX_VERSION_CODE < VERSION(4,18,0)
+	.proc_fops = &z055_proc_fops,
+#else
+	.proc_show = z055_proc_show,
+#endif
+#else
+	.read_proc = read_proc,
+#endif
 };
 
 /*
@@ -3133,8 +3334,12 @@ int z055_init_tty()
 	G_serial_driver->subtype = SERIAL_TYPE_NORMAL;
 	G_serial_driver->init_termios = tty_std_termios;
 	G_serial_driver->init_termios.c_cflag = B9600 | CS8 | CREAD | HUPCL | CLOCAL;
+#if LINUX_VERSION_CODE > VERSION(2,6,19)
+	G_serial_driver->init_termios.c_ispeed = 9600;
+	G_serial_driver->init_termios.c_ospeed = 9600;
+#endif
 	G_serial_driver->flags = TTY_DRIVER_REAL_RAW;
-
+	tty_set_operations(G_serial_driver, &ops);
 	if (tty_register_driver(G_serial_driver) < 0)
 		printk( "%s(%d): Couldn't register serial driver\n",
 				__FUNCTION__, __LINE__);
