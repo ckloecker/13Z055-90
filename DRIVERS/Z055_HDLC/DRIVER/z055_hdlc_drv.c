@@ -3323,7 +3323,6 @@ int z055_init_tty()
 	if (!G_serial_driver)
 		return -ENOMEM;
 	G_serial_driver->owner = THIS_MODULE;
-	G_serial_driver->ops = &ops;
 #endif /* #if   LINUX_VERSION_CODE < VERSION(2,6,0) */
 
 	G_serial_driver->driver_name = "men_lx_z055";
@@ -3714,9 +3713,6 @@ void z055_hw_start_receiver( struct Z055_STRUCT *info    )
  */
 void z055_hw_start_transmitter( struct Z055_STRUCT *info )
 {
-	unsigned long flags;
-
-
 	if (debug_level & DEBUG_LEVEL_ISR)
 		printk( "%s(%d): %s\n",
 				__FUNCTION__, __LINE__, info->device_name );
@@ -3729,7 +3725,6 @@ void z055_hw_start_transmitter( struct Z055_STRUCT *info )
 
 		info->drop_rts_on_tx_done = 0;
 
-		spin_lock_irqsave(&info->irq_spinlock,flags);
 		z055_hw_ClearIrqPendingBits( info,  Z055_IRQR_TXBOVR +
 											Z055_IRQR_TXBEPY );
 		z055_hw_EnableInterrupts( info, Z055_IER_TXBOVREN +
@@ -3738,10 +3733,10 @@ void z055_hw_start_transmitter( struct Z055_STRUCT *info )
 		z055_hw_EnableTransmitter(info,ENABLE_UNCONDITIONAL);
 
 		info->tx_active = 1;
-		spin_unlock_irqrestore(&info->irq_spinlock,flags);
 
 		info->tx_timer.expires = jiffies + jiffies_from_ms(5000);
 		add_timer(&info->tx_timer);
+
 	}
 }   /* end of z055_hw_start_transmitter() */
 
@@ -3925,9 +3920,7 @@ void z055_hw_set_serial_signals(    struct Z055_STRUCT *info    )
 void z055_reset_rx_buffers( struct Z055_STRUCT *info )
 {
 	unsigned int i;
-	unsigned long flags;
 
-	spin_lock_irqsave(&info->irq_spinlock,flags);
 	for ( i = 0; i < info->rx_buffer_q.num_buffers; i++ ) {
 		info->rx_buffer_q.get_buffer->ccount = 0;
 		info->rx_buffer_q.get_buffer->status = 0;
@@ -3936,7 +3929,6 @@ void z055_reset_rx_buffers( struct Z055_STRUCT *info )
 
 	info->rx_buffer_q.buffers_used = 0;
 	info->rx_buffer_q.get_buffer = info->rx_buffer_q.put_buffer;
-	spin_unlock_irqrestore(&info->irq_spinlock,flags);
 
 }   /* end of z055_reset_rx_buffers() */
 
