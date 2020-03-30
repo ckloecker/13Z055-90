@@ -13,17 +13,17 @@ DEVICE=ppp0
 PIDFILE="/var/run/$DEVICE.pid"
 
 [ -f $PIDFILE ] || {
-    echo -e "The pppd process ID file for device $DEVICE \n" \
-            "does not exist. Either pppd is not running or \n" \
-            "the wrong device was specified."
+    echo "The pppd process ID file for device $DEVICE"
+    echo "does not exist. Either pppd is not running or"
+    echo "the wrong device was specified."
 }
 
-PID=`cat $PIDFILE`
+PID=$(cat $PIDFILE)
 
-if [ -n $PID ]; then
+if [ -n "$PID" ]; then
     echo "Process ID of pppd for device $DEVICE is $PID"
     echo "Sending hangup signal to process $PID..."
-    /bin/kill -HUP $PID
+    /bin/kill -HUP "$PID"
 else
     echo "$PIDFILE is empty, the pppd process ID cant be identified"
 fi

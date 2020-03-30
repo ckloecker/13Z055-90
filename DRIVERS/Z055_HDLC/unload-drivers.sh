@@ -18,7 +18,7 @@ if [ ! -f $LSMOD ]; then
     LSMOD=lsmod
 fi
 
-( $LSMOD | grep -i "men_z055_hdlc" >/dev/null) 	&& ${RMMOD} men_z055_hdlc
+( $LSMOD | grep -i "men_lx_z055" >/dev/null) 	&& ${RMMOD} men_lx_z055
 ( $LSMOD | grep -i "n_hdlc"	>/dev/null)	&& ${RMMOD} n_hdlc
 
 

@@ -1,5 +1,6 @@
-#!/bin/sh
-PATH=/sbin:/usr/sbin:/bin:/usr/bin
+#!/bin/bash
+
+DRIVERLOADTOOL=/opt/menlinux/DRIVERS/Z055_HDLC/load-drivers.sh
 
 # Sample script to activate PPP connection using a Z055_HDLC adapter
 # and the pppd program.
@@ -98,13 +99,19 @@ shift
 # load necessary drivers using the sample driver load script
 #-----------------------------------------------------------
 
-echo "Loading necessary drivers for $MODEMPORT..."
-./load-drivers.sh  || exit 1
+DRIVERLOADED=$(lsmod | grep -c men_lx_z055)
+
+if [ "${DRIVERLOADED}" = "0" ] ; then
+  echo "Loading necessary drivers for $MODEMPORT..."
+  ${DRIVERLOADTOOL} || exit 1
+else
+  echo "Driver men_lx_z055 is loaded!"
+fi
 
 [ -c $MODEMPORT ] || {
-  echo -e "Z055_HDLC device $MODEMPORT does not exist.\n" \
-          "Be sure that Z055_HDLC device driver is loaded" \
-          "and proper device instance is specified.\n"
+  echo "Z055_HDLC device $MODEMPORT does not exist."
+  echo "Be sure that Z055_HDLC device driver is loaded"
+  echo "and proper device instance is specified."
   exit 1
 }
 
@@ -118,11 +125,11 @@ if [ "${DEFROUTE}" = yes ] ; then
   opts="$opts defaultroute"
 fi
 if [ -n "${MRU}" ] ; then
-	echo "set MRU to $MRU"
+  echo "set MRU to $MRU"
   opts="$opts mru ${MRU}"
 fi
 if [ -n "${MTU}" ] ; then
-	echo "set MTU to $MTU"
+  echo "set MTU to $MTU"
   opts="$opts mtu ${MTU}"
 fi
 if [ -n "${IPADDR}${REMIP}" ] ; then
@@ -138,25 +145,26 @@ fi
 # Use z055_hdlc_util to configure the adapter
 #-----------------------------------------------
 #
-if [ -f z055_hdlc_util ] ; then
-    echo "Can't find z055_hdlc_util program."
-    echo "Verify program is built and installed in $PATH."
-    exit 1
+if ! command -v z055_hdlc_util ; then
+  echo "Can't find z055_hdlc_util program."
+  echo "Verify program is built and installed"
+  exit 1
 fi
+  Z055UTIL=$(command -v z055_hdlc_util)
 
 if [ "$SYNC" = "yes" ]; then
-    PORTOPTIONS="hdlc manch+nrzi -loopback crcpreset 1 crcinv"
+  PORTOPTIONS="hdlc manch+nrzi -loopback crcpreset 1 crcinv"
 
-    # add PPPD sync option
-    opts="$opts sync"
+  # add PPPD sync option
+  opts="$opts sync"
 else
-    echo "Modes others than synchronous, frame oriented are not supported by this driver"
-    exit 1
+  echo "Modes others than synchronous, frame oriented are not supported by this driver"
+  exit 1
 fi
 
 if [ ! "$LINESPEED" = "0" ]; then
-	echo "Setting linespeed with z055_hdlc_util to $LINESPEED"
-	PORTOPTIONS="$PORTOPTIONS baudrate $LINESPEED"
+  echo "Setting linespeed with z055_hdlc_util to $LINESPEED"
+  PORTOPTIONS="$PORTOPTIONS baudrate $LINESPEED"
 fi
 
 #-------------------------------------------------------
@@ -170,14 +178,18 @@ fi
 #-------------------------------------------------------
 stty --file=$MODEMPORT -hupcl
 
-z055_hdlc_util $MODEMPORT $PORTOPTIONS
+echo "z055_hdlc_util cmd:"
+echo "$Z055UTIL $MODEMPORT $PORTOPTIONS"
+$Z055UTIL $MODEMPORT $PORTOPTIONS
 
 #-------------------------------------------
 # start pppd program with configured options
 #-------------------------------------------
 
+echo "pppd cmd"
+echo "/usr/sbin/pppd -detach $opts $MODEMPORT ipparam $DEVICE ${PPPOPTIONS}"
 /usr/sbin/pppd -detach $opts $MODEMPORT \
- 				ipparam $DEVICE ${PPPOPTIONS}
+  ipparam $DEVICE ${PPPOPTIONS}
 
 #-------------------------------------------
 # reset default HUPCL behavior on port after
