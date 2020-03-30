@@ -317,6 +317,8 @@ static int debug_level;
 static int maxframe[Z055_MAX_DEVICES];
 static int num_rxbufs[Z055_MAX_DEVICES];
 
+static const char IdentString[]=MENT_XSTR(MAK_REVISION);
+
 #if LINUX_VERSION_CODE > VERSION(2,6,9)
 module_param(break_on_load,int,0);
 module_param(ttymajor,int,0);
@@ -338,7 +340,7 @@ MODULE_PARM_DESC(maxframe,  "maximum framesize to allocate buffer for");
 MODULE_PARM_DESC(num_rxbufs, "number of Rx Buffers to   allocate");
 
 static char *G_driver_name = "Z055 HDLC driver";
-static char *G_driver_version = "%FSREV ART/13Z055-90/13Z055-90 1.1 2005-05-30% $";
+
 
 static int z055_init_one    (CHAMELEON_UNIT_T   *chu);
 static int z055_remove_one  (CHAMELEON_UNIT_T   *chu);
@@ -2829,7 +2831,7 @@ int z055_read_proc(char *page, char **start, off_t off, int count,
 	off_t   begin = 0;
 	struct Z055_STRUCT *info;
 
-	len += sprintf(page, "Z055 HDLC driver:%s\n", G_driver_version);
+	len += sprintf(page, "Z055 HDLC driver:%s\n", IdentString);
 
 	info = G_z055_device_list;
 	while( info ) {
@@ -3344,7 +3346,7 @@ int z055_init_tty()
 				__FUNCTION__, __LINE__);
 
 	printk("%s %s, tty major#%d\n",
-		G_driver_name, G_driver_version,
+		G_driver_name, IdentString,
 		G_serial_driver->major);
 
 #if LINUX_VERSION_CODE < VERSION(2,6,0)
@@ -3376,7 +3378,7 @@ int __init z055_init(void)
 	if (debug_level & DEBUG_LEVEL_INFO)
 		printk( "%s(%d)\n", __FUNCTION__, __LINE__ );
 
-	printk("%s %s\n", G_driver_name, G_driver_version);
+	printk("%s %s\n", G_driver_name, IdentString);
 
 	if( !men_chameleon_register_driver( &G_driver ) )
 		return -ENODEV;
@@ -3412,7 +3414,7 @@ static void __exit z055_hdlc_exit(void)
 	struct Z055_STRUCT *tmp;
 
 	printk( "%s(%d): Unloading %s: %s\n",
-			__FUNCTION__, __LINE__, G_driver_name,  G_driver_version);
+			__FUNCTION__, __LINE__, G_driver_name,  IdentString);
 
 	printk( "%s(%d): %s %s\n",
 			__FUNCTION__, __LINE__,
