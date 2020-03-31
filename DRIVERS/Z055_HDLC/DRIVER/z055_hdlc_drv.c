@@ -582,24 +582,54 @@ void z055_bh_receive(struct Z055_STRUCT *info)
 {
 	struct tty_struct *tty = Z055_STRUCT_get_tty(info);
 	unsigned long flags;
+#if LINUX_VERSION_CODE > VERSION(2,6,9)
+	struct tty_ldisc *ld;
+#endif
 
 	if ( debug_level & DEBUG_LEVEL_BH )
 		printk( "%s(%d): %s\n", __FUNCTION__, __LINE__, info->device_name);
-
 
 	/* pass frame(s) */
 	while( info->rx_buffer_q.buffers_used ) {
 		if ( debug_level & DEBUG_LEVEL_DATA )
 			z055_trace_block( info, info->rx_buffer_q.put_buffer->buffer,
-							  MIN(info->rx_buffer_q.put_buffer->ccount, PAGE_SIZE),0);
+								MIN(info->rx_buffer_q.put_buffer->ccount, PAGE_SIZE),0);
 
-
-		/* Call the line discipline receive callback directly. */
+#if LINUX_VERSION_CODE > VERSION(2,6,9)
+		if (tty) {
+			ld = tty_ldisc_ref(tty);
+			if (ld) {
 #if LINUX_VERSION_CODE < VERSION(2,6,27)
-    if ( tty && tty->ldisc.receive_buf ) {
+				if (ld->receive_buf) {
 #else
-		if ( tty && tty->ldisc->ops->receive_buf ) {
+				if (ld->ops->receive_buf) {
 #endif
+					/* Call the line discipline receive callback directly. */
+					struct RXTX_BUFFER_S *put_buf = info->rx_buffer_q.put_buffer;
+					if ( debug_level & DEBUG_LEVEL_BH )
+						printk( "%s(%d): %s frame put from buffer addr:0x%08x;"
+								" count:%d; used_bufs:0x%d\n",
+								__FUNCTION__, __LINE__, info->device_name,
+								put_buf->buffer, put_buf->ccount,
+								info->rx_buffer_q.buffers_used);
+#if LINUX_VERSION_CODE < VERSION(2,6,27)
+					ld->receive_buf( tty,
+									info->rx_buffer_q.put_buffer->buffer,
+									NULL,
+				 					info->rx_buffer_q.put_buffer->ccount );
+#else
+					ld->ops->receive_buf( tty,
+									info->rx_buffer_q.put_buffer->buffer,
+									NULL,
+									info->rx_buffer_q.put_buffer->ccount );
+#endif
+				}
+				tty_ldisc_deref(ld);
+			}
+		}
+#else
+		if (tty && tty->ldisc.receive_buf ) {
+			/* Call the line discipline receive callback directly. */
 			struct RXTX_BUFFER_S *put_buf = info->rx_buffer_q.put_buffer;
 			if ( debug_level & DEBUG_LEVEL_BH )
 				printk( "%s(%d): %s frame put from buffer addr:0x%08x;"
@@ -607,24 +637,16 @@ void z055_bh_receive(struct Z055_STRUCT *info)
 						__FUNCTION__, __LINE__, info->device_name,
 						put_buf->buffer, put_buf->ccount,
 						info->rx_buffer_q.buffers_used);
-#if LINUX_VERSION_CODE < VERSION(2,6,27)
 			tty->ldisc.receive_buf( tty,
-									info->rx_buffer_q.put_buffer->buffer,
-									NULL,
-				 					info->rx_buffer_q.put_buffer->ccount );
-#else
-			tty->ldisc->ops->receive_buf( tty,
-									info->rx_buffer_q.put_buffer->buffer,
-									NULL,
-				 					info->rx_buffer_q.put_buffer->ccount );
-#endif
+										info->rx_buffer_q.put_buffer->buffer,
+										NULL,
+				 						info->rx_buffer_q.put_buffer->ccount );
 		}
+#endif
 		spin_lock_irqsave(&info->irq_spinlock,flags);
 		info->rx_buffer_q.put_buffer = info->rx_buffer_q.put_buffer->next;
 		info->rx_buffer_q.buffers_used--;
 		spin_unlock_irqrestore(&info->irq_spinlock,flags);
-
-
 	}
 }
 
