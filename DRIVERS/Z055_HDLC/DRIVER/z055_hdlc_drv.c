@@ -163,34 +163,34 @@ void z055_hw_ClearIrqPendingBits( struct Z055_STRUCT *info, u16 IrqMask );
 #define z055_hw_EnableReceiver(a,b) \
 	Z055_OUTREG( (a), Z055_HCR, ((Z055_INREG((a), Z055_HCR) & 0xfffe) | (b)) )
 
-void z055_hw_start_receiver( struct Z055_STRUCT *info );
-void z055_hw_stop_receiver( struct Z055_STRUCT *info );
+static void z055_hw_start_receiver( struct Z055_STRUCT *info );
+static void z055_hw_stop_receiver( struct Z055_STRUCT *info );
 
-void z055_hw_start_transmitter( struct Z055_STRUCT *info );
-void z055_hw_stop_transmitter( struct Z055_STRUCT *info );
-void z055_hw_set_txidle( struct Z055_STRUCT *info );
+static void z055_hw_start_transmitter( struct Z055_STRUCT *info );
+static void z055_hw_stop_transmitter( struct Z055_STRUCT *info );
+static void z055_hw_set_txidle( struct Z055_STRUCT *info );
 void z055_hw_load_txfifo( struct Z055_STRUCT *info );
 
-void z055_hw_enable_brgen( struct Z055_STRUCT *info, u32 DataRate   );
-void z055_hw_enable_loopback( struct Z055_STRUCT *info, int enable );
+static void z055_hw_enable_brgen( struct Z055_STRUCT *info, u32 DataRate   );
+static void z055_hw_enable_loopback( struct Z055_STRUCT *info, int enable );
 
-void z055_hw_get_serial_signals( struct Z055_STRUCT *info );
-void z055_hw_set_serial_signals( struct Z055_STRUCT *info );
+static void z055_hw_get_serial_signals( struct Z055_STRUCT *info );
+static void z055_hw_set_serial_signals( struct Z055_STRUCT *info );
 
-void z055_hw_reset( struct Z055_STRUCT *info );
+static void z055_hw_reset( struct Z055_STRUCT *info );
 
-void z055_hw_set_sync_mode( struct Z055_STRUCT *info );
-void z055_hw_set_sdlc_mode( struct Z055_STRUCT *info );
+static void z055_hw_set_sync_mode( struct Z055_STRUCT *info );
+static void z055_hw_set_sdlc_mode( struct Z055_STRUCT *info );
 
 void z055_hw_loopback_frame( struct Z055_STRUCT *info );
 
 #if LINUX_VERSION_CODE < VERSION(4,15,0)
-void z055_tx_timeout(unsigned long context);
+static void z055_tx_timeout(unsigned long context);
 #else
-void z055_tx_timeout(struct timer_list *t);
+static void z055_tx_timeout(struct timer_list *t);
 #endif
 
-int z055_ioctl_common(struct Z055_STRUCT *info, unsigned int cmd, unsigned long arg);
+static int z055_ioctl_common(struct Z055_STRUCT *info, unsigned int cmd, unsigned long arg);
 static int z055_tty_install(struct tty_driver *driver, struct tty_struct *tty);
 
 static unsigned int z055_hw_get_modem_info(struct Z055_STRUCT * info);
@@ -211,52 +211,52 @@ static unsigned int z055_hw_get_modem_info(struct Z055_STRUCT * info);
 ((Nrdd)   << 11) + \
 ((Nrad)   <<  6) )
 
-void z055_trace_block(struct Z055_STRUCT *info,const char* data, int count, int xmit);
+static void z055_trace_block(struct Z055_STRUCT *info,const char* data, int count, int xmit);
 
 /*
  * Adapter diagnostic routines
  */
-BOOLEAN z055_register_test( struct Z055_STRUCT *info );
-int z055_adapter_test( struct Z055_STRUCT *info );
+static BOOLEAN z055_register_test( struct Z055_STRUCT *info );
+static int z055_adapter_test( struct Z055_STRUCT *info );
 
 /*
  * device and resource management routines
  */
-int z055_claim_resources(struct Z055_STRUCT *info);
-void z055_release_resources(struct Z055_STRUCT *info);
-void z055_add_device(struct Z055_STRUCT *info);
+static int z055_claim_resources(struct Z055_STRUCT *info);
+static void z055_release_resources(struct Z055_STRUCT *info);
+static void z055_add_device(struct Z055_STRUCT *info);
 struct Z055_STRUCT* z055_allocate_device(void);
 
 /*
  * buffer manipulation functions.
  */
-void z055_reset_rx_buffers( struct Z055_STRUCT *info );
-void z055_load_tx_buffer( struct Z055_STRUCT *info, const char *Buffer, unsigned int BufferSize);
+static void z055_reset_rx_buffers( struct Z055_STRUCT *info );
+static void z055_load_tx_buffer( struct Z055_STRUCT *info, const char *Buffer, unsigned int BufferSize);
 
-int z055_alloc_rtxbuffer_memory( struct Z055_STRUCT *info,
+static int z055_alloc_rtxbuffer_memory( struct Z055_STRUCT *info,
 								 struct RXTX_BUFFER_QUEUE_S *queue);
-void z055_free_rtxbuffer_memory( struct Z055_STRUCT *info,
+static void z055_free_rtxbuffer_memory( struct Z055_STRUCT *info,
 								 struct RXTX_BUFFER_QUEUE_S *queue);
 
 /*
  * Bottom half interrupt handlers
  */
 #if LINUX_VERSION_CODE < VERSION(2,6,20)
-void z055_bh_handler(void* context);
+static void z055_bh_handler(void* context);
 #else
-void z055_bh_handler(struct work_struct *work);
+static void z055_bh_handler(struct work_struct *work);
 #endif
-void z055_bh_receive(struct Z055_STRUCT *info);
-void z055_bh_transmit(struct Z055_STRUCT *info);
-void z055_bh_status(struct Z055_STRUCT *info);
+static void z055_bh_receive(struct Z055_STRUCT *info);
+static void z055_bh_transmit(struct Z055_STRUCT *info);
+static void z055_bh_status(struct Z055_STRUCT *info);
 
 /*
  * Interrupt handler routines and dispatch table.
  */
-void z055_isr_transmit( struct Z055_STRUCT *info );
-void z055_isr_receive_data( struct Z055_STRUCT *info );
-void z055_isr_receive_status( struct Z055_STRUCT *info );
-void z055_isr_misc( struct Z055_STRUCT *info );
+static void z055_isr_transmit( struct Z055_STRUCT *info );
+static void z055_isr_receive_data( struct Z055_STRUCT *info );
+static void z055_isr_receive_status( struct Z055_STRUCT *info );
+static void z055_isr_misc( struct Z055_STRUCT *info );
 
 /*
  * ioctl call handlers
@@ -382,8 +382,8 @@ static struct termios *G_serial_termios_locked[Z055_MAX_DEVICES];
  * (gdb) to get the .text address for the add-symbol-file command.
  * This allows remote debugging of dynamically loadable modules.
  */
-void* z055_get_text_ptr(void);
-void* z055_get_text_ptr() {return z055_get_text_ptr;}
+static void* z055_get_text_ptr(void);
+static void* z055_get_text_ptr() {return z055_get_text_ptr;}
 
 /*
  * G_tmp_buf is used as a temporary buffer by z055_write. We need to
@@ -528,9 +528,9 @@ int z055_bh_action(struct Z055_STRUCT   *info)
  *  Perform bottom half processing of work items queued by ISR.
  */
 #if LINUX_VERSION_CODE < VERSION(2,6,20)
-void z055_bh_handler(void* context)
+static void z055_bh_handler(void* context)
 #else
-void z055_bh_handler(struct work_struct *work)
+static void z055_bh_handler(struct work_struct *work)
 #endif
 {
 #if LINUX_VERSION_CODE < VERSION(2,6,20)
@@ -578,7 +578,7 @@ void z055_bh_handler(struct work_struct *work)
 		printk( "%s(%d): %s exit\n", __FUNCTION__, __LINE__, info->device_name);
 }
 
-void z055_bh_receive(struct Z055_STRUCT *info)
+static void z055_bh_receive(struct Z055_STRUCT *info)
 {
 	struct tty_struct *tty = Z055_STRUCT_get_tty(info);
 	unsigned long flags;
@@ -650,7 +650,7 @@ void z055_bh_receive(struct Z055_STRUCT *info)
 	}
 }
 
-void z055_bh_transmit(struct Z055_STRUCT *info)
+static void z055_bh_transmit(struct Z055_STRUCT *info)
 {
 	struct tty_struct *tty = Z055_STRUCT_get_tty(info);
 
@@ -679,7 +679,7 @@ void z055_bh_transmit(struct Z055_STRUCT *info)
 	}
 }
 
-void z055_bh_status(struct Z055_STRUCT *info)
+static void z055_bh_status(struct Z055_STRUCT *info)
 {
 	if ( debug_level & DEBUG_LEVEL_BH )
 		printk( "%s(%d): entry on %s\n",
@@ -698,7 +698,7 @@ void z055_bh_status(struct Z055_STRUCT *info)
  * Arguments:       info    pointer to device instance data
  * Return Value:    None
  */
-void z055_isr_receive_status( struct    Z055_STRUCT *info )
+static void z055_isr_receive_status( struct    Z055_STRUCT *info )
 {
 	u16 status = Z055_INREG(    info, Z055_IRQR );
 
@@ -733,7 +733,7 @@ void z055_isr_receive_status( struct    Z055_STRUCT *info )
  * Arguments:       info           pointer to device instance data
  * Return Value:    None
  */
-void z055_isr_transmit( struct Z055_STRUCT *info )
+static void z055_isr_transmit( struct Z055_STRUCT *info )
 {
 	struct tty_struct *tty = Z055_STRUCT_get_tty(info);
 	u16 status = Z055_INREG( info, Z055_IRQR );
@@ -781,7 +781,7 @@ void z055_isr_transmit( struct Z055_STRUCT *info )
  * Arguments:       info   pointer to device instance data
  * Return Value:    None
  */
-void z055_isr_receive_data( struct Z055_STRUCT *info )
+static void z055_isr_receive_data( struct Z055_STRUCT *info )
 {
 	int cpCount, rxCount = Z055_INREG( info, Z055_RXSZR );
 	u16 status   = Z055_INREG( info, Z055_IRQR ),
@@ -887,7 +887,7 @@ isr_end:
  * Arguments:       info        pointer to device extension (instance data)
  * Return Value:    None
  */
-void z055_isr_misc( struct Z055_STRUCT *info )
+static void z055_isr_misc( struct Z055_STRUCT *info )
 {
 	u16 status = Z055_INREG(info, Z055_IRQR);
 
@@ -2045,7 +2045,7 @@ static int z055_ioctl(struct tty_struct *tty, unsigned int cmd, unsigned long ar
 	return z055_ioctl_common(info, cmd, arg);
 }
 
-int z055_ioctl_common(struct Z055_STRUCT *info,
+static int z055_ioctl_common(struct Z055_STRUCT *info,
 					  unsigned int cmd,
 					  unsigned long arg)
 {
@@ -3004,7 +3004,7 @@ static const struct file_operations z055_proc_fops = {
  *
  * Return Value:    0 if success, otherwise -ENOMEM
  */
-int z055_alloc_rtxbuffer_memory( struct Z055_STRUCT *info,
+static int z055_alloc_rtxbuffer_memory( struct Z055_STRUCT *info,
 								 struct RXTX_BUFFER_QUEUE_S *queue)
 {
 	struct RXTX_BUFFER_S *qEnt;
@@ -3070,7 +3070,7 @@ int z055_alloc_rtxbuffer_memory( struct Z055_STRUCT *info,
  *
  * Return Value:    None
  */
-void z055_free_rtxbuffer_memory( struct Z055_STRUCT *info,
+static void z055_free_rtxbuffer_memory( struct Z055_STRUCT *info,
 								 struct RXTX_BUFFER_QUEUE_S *queue)
 {
 	if ( queue->buffer_start )
@@ -3080,7 +3080,7 @@ void z055_free_rtxbuffer_memory( struct Z055_STRUCT *info,
 
 }   /* end of z055_free_rtxbuffer_memory() */
 
-int z055_claim_resources(struct Z055_STRUCT *info)
+static int z055_claim_resources(struct Z055_STRUCT *info)
 {
 #ifdef MAC_MEM_MAPPED
 	if ( debug_level & DEBUG_LEVEL_INFO )
@@ -3149,7 +3149,7 @@ errout:
 
 }   /* end of z055_claim_resources()    */
 
-void z055_release_resources(struct Z055_STRUCT *info)
+static void z055_release_resources(struct Z055_STRUCT *info)
 {
 	if ( debug_level & DEBUG_LEVEL_INFO )
 		printk( "%s(%d): %s entry\n", __FUNCTION__, __LINE__, info->device_name);
@@ -3187,7 +3187,7 @@ void z055_release_resources(struct Z055_STRUCT *info)
  * Arguments:       info    pointer to device instance data
  * Return Value:    None
  */
-void z055_add_device( struct    Z055_STRUCT *info )
+static void z055_add_device( struct    Z055_STRUCT *info )
 {
 	info->next_device = NULL;
 	info->line = G_z055_device_count;
@@ -3487,7 +3487,7 @@ module_exit(z055_hdlc_exit);
  * Arguments:       info    pointer to device instance data
  * Return Value:    NONE
  */
-void z055_hw_set_sdlc_mode( struct Z055_STRUCT *info )
+static void z055_hw_set_sdlc_mode( struct Z055_STRUCT *info )
 {
 	u16 RegValue;
 
@@ -3580,7 +3580,7 @@ void z055_hw_set_sdlc_mode( struct Z055_STRUCT *info )
  *                  enable  1 = enable loopback, 0 = disable
  * Return Value:    None
  */
-void z055_hw_enable_loopback(struct Z055_STRUCT *info, int enable)
+static void z055_hw_enable_loopback(struct Z055_STRUCT *info, int enable)
 {
 
 	if ( debug_level & DEBUG_LEVEL_INFO )
@@ -3620,7 +3620,7 @@ void z055_hw_enable_loopback(struct Z055_STRUCT *info, int enable)
  *
  * Return Value:    None
  */
-void z055_hw_enable_brgen( struct Z055_STRUCT *info, u32 data_rate )
+static void z055_hw_enable_brgen( struct Z055_STRUCT *info, u32 data_rate )
 {
 	u32 XtalSpeed;
 	u32 Tc;
@@ -3664,7 +3664,7 @@ void z055_hw_enable_brgen( struct Z055_STRUCT *info, u32 data_rate )
  * Arguments:       info    pointer to device instance data
  * Return Value:    None
  */
-void z055_hw_stop_receiver( struct Z055_STRUCT *info )
+static void z055_hw_stop_receiver( struct Z055_STRUCT *info )
 {
 	if (debug_level & DEBUG_LEVEL_ISR)
 		printk("%s(%d): %s\n", __FUNCTION__, __LINE__, info->device_name );
@@ -3696,7 +3696,7 @@ void z055_hw_stop_receiver( struct Z055_STRUCT *info )
  * Arguments:       info    pointer to device instance data
  * Return Value:    None
  */
-void z055_hw_start_receiver( struct Z055_STRUCT *info    )
+static void z055_hw_start_receiver( struct Z055_STRUCT *info    )
 {
 	if (debug_level & DEBUG_LEVEL_ISR)
 		printk( "%s(%d): %s\n",
@@ -3735,7 +3735,7 @@ void z055_hw_start_receiver( struct Z055_STRUCT *info    )
  * Arguments:       info    pointer to device instance data
  * Return Value:    None
  */
-void z055_hw_start_transmitter( struct Z055_STRUCT *info )
+static void z055_hw_start_transmitter( struct Z055_STRUCT *info )
 {
 	if (debug_level & DEBUG_LEVEL_ISR)
 		printk( "%s(%d): %s\n",
@@ -3771,7 +3771,7 @@ void z055_hw_start_transmitter( struct Z055_STRUCT *info )
  * Arguments:       info    pointer to device isntance data
  * Return Value:    None
  */
-void z055_hw_stop_transmitter( struct Z055_STRUCT   *info )
+static void z055_hw_stop_transmitter( struct Z055_STRUCT   *info )
 {
 	if (debug_level & DEBUG_LEVEL_ISR)
 		printk( "%s(%d): %s\n",
@@ -3798,7 +3798,7 @@ void z055_hw_stop_transmitter( struct Z055_STRUCT   *info )
  * Arguments:       info    pointer to device instance data
  * Return Value:    None
 */
-void z055_hw_reset( struct Z055_STRUCT *info )
+static void z055_hw_reset( struct Z055_STRUCT *info )
 {
 	if ( info->bus_type == Z055_BUS_TYPE_PCI    ) {
 		int i;
@@ -3831,7 +3831,7 @@ void z055_hw_reset( struct Z055_STRUCT *info )
  * Arguments:       info    pointer to adapter info structure
  * Return Value:    None
  */
-void z055_hw_set_sync_mode( struct Z055_STRUCT *info )
+static void z055_hw_set_sync_mode( struct Z055_STRUCT *info )
 {
 	z055_hw_set_sdlc_mode( info );
 
@@ -3847,7 +3847,7 @@ void z055_hw_set_sync_mode( struct Z055_STRUCT *info )
  * Arguments:       info    pointer to device instance data
  * Return Value:    None
  */
-void z055_hw_set_txidle(    struct Z055_STRUCT *info    )
+static void z055_hw_set_txidle(    struct Z055_STRUCT *info    )
 {
 	u16 hw_idle_mode =  Z055_HCR_TXIDLE;
 
@@ -3873,7 +3873,7 @@ void z055_hw_set_txidle(    struct Z055_STRUCT *info    )
  * Arguments:       info    pointer to device instance data
  * Return Value:    None
  */
-void z055_hw_get_serial_signals( struct Z055_STRUCT *info )
+static void z055_hw_get_serial_signals( struct Z055_STRUCT *info )
 {
 	u16 status;
 
@@ -3903,7 +3903,7 @@ void z055_hw_get_serial_signals( struct Z055_STRUCT *info )
  * Arguments:       info    pointer to device instance data
  * Return Value:    None
  */
-void z055_hw_set_serial_signals(    struct Z055_STRUCT *info    )
+static void z055_hw_set_serial_signals(    struct Z055_STRUCT *info    )
 {
 	u16 Control;
 	unsigned char V24Out = info->serial_signals;
@@ -3941,7 +3941,7 @@ void z055_hw_set_serial_signals(    struct Z055_STRUCT *info    )
  * Arguments:       info    pointer to device instance data
  * Return Value:    None
  */
-void z055_reset_rx_buffers( struct Z055_STRUCT *info )
+static void z055_reset_rx_buffers( struct Z055_STRUCT *info )
 {
 	unsigned int i;
 
@@ -3968,7 +3968,7 @@ void z055_reset_rx_buffers( struct Z055_STRUCT *info )
  *
  * Return Value:    None
  */
-void z055_load_tx_buffer(struct Z055_STRUCT *info,
+static void z055_load_tx_buffer(struct Z055_STRUCT *info,
 						 const char *buffer,
 	 					 unsigned int bufferSize)
 {
@@ -4002,7 +4002,7 @@ void z055_load_tx_buffer(struct Z055_STRUCT *info,
  * Arguments:       info    pointer to device instance data
  * Return Value:        TRUE if test passed, otherwise FALSE
  */
-BOOLEAN z055_register_test( struct Z055_STRUCT *info )
+static BOOLEAN z055_register_test( struct Z055_STRUCT *info )
 {
 	static unsigned short BitPatterns[] =
 		{0x0000, 0xffff, 0xaaaa, 0x5555, 0x1234, 0x6969, 0x9696, 0x0f0f, 0x0000};
@@ -4054,7 +4054,7 @@ BOOLEAN z055_register_test( struct Z055_STRUCT *info )
  * Arguments:       info    pointer to device instance data
  * Return Value:    0 if success, otherwise -ENODEV
  */
-int z055_adapter_test( struct Z055_STRUCT   *info )
+static int z055_adapter_test( struct Z055_STRUCT   *info )
 {
 	if ( debug_level & DEBUG_LEVEL_INFO )
 		printk( "%s(%d):Testing device %s\n",
@@ -4077,7 +4077,7 @@ int z055_adapter_test( struct Z055_STRUCT   *info )
 
 }   /* end of z055_adapter_test() */
 
-void z055_trace_block(struct Z055_STRUCT *info, const char* data, int count, int xmit)
+static void z055_trace_block(struct Z055_STRUCT *info, const char* data, int count, int xmit)
 {
 	int i;
 	int linecount;
@@ -4119,11 +4119,11 @@ void z055_trace_block(struct Z055_STRUCT *info, const char* data, int count, int
  */
 
 #if LINUX_VERSION_CODE < VERSION(4,15,0)
-void z055_tx_timeout(unsigned long context)
+static void z055_tx_timeout(unsigned long context)
 {
 	struct Z055_STRUCT *info = (struct Z055_STRUCT*)context;
 #else
-void z055_tx_timeout(struct timer_list *t)
+static void z055_tx_timeout(struct timer_list *t)
 {
 	struct Z055_STRUCT *info = from_timer(info, t, tx_timer);
 #endif
