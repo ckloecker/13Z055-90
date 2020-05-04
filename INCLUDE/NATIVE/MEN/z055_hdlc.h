@@ -11,7 +11,7 @@
  *
  *    \switches  none
  *---------------------------------------------------------------------------
- * Copyright 2004-2020, MEN Mikro Elektronik GmbH, Nuernberg, Germany
+ * Copyright 2004-2020, MEN Mikro Elektronik GmbH
  ****************************************************************************/
 
  /*
