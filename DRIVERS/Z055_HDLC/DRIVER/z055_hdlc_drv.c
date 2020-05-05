@@ -346,6 +346,7 @@ static int z055_init_one    (CHAMELEON_UNIT_T   *chu);
 static int z055_remove_one  (CHAMELEON_UNIT_T   *chu);
 
 MODULE_LICENSE("GPL");
+MODULE_VERSION(MENT_XSTR(MAK_REVISION));
 
 static u16 G_modCodeArr[] = { CHAMELEON_16Z055_HDLC, CHAMELEON_MODCODE_END };
 
