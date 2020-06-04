@@ -2454,7 +2454,10 @@ static int block_til_ready(struct tty_struct *tty, struct file * filp,
 {
 	DECLARE_WAITQUEUE(wait, current);
 	int     retval;
-	int     do_clocal = 0, extra_count = 0;
+	int     do_clocal = 0;
+#ifndef RHEL_7_3_514
+	int extra_count = 0;
+#endif
 	unsigned long   flags;
 
 	if (debug_level & DEBUG_LEVEL_INFO)
@@ -2492,10 +2495,14 @@ static int block_til_ready(struct tty_struct *tty, struct file * filp,
 			 	Z055_STRUCT_ref_count(info) );
 
 	spin_lock_irqsave(&info->irq_spinlock, flags);
+#ifndef RHEL_7_3_514
 	if (!tty_hung_up_p(filp)) {
 		extra_count = 1;
 		Z055_STRUCT_dec_ref_count(info);
 	}
+#else
+	Z055_STRUCT_dec_ref_count(info);
+#endif
 	spin_unlock_irqrestore(&info->irq_spinlock, flags);
 	Z055_STRUCT_inc_blocked_open(info);
 
@@ -2548,8 +2555,13 @@ static int block_til_ready(struct tty_struct *tty, struct file * filp,
 	set_current_state(TASK_RUNNING);
 	remove_wait_queue(&Z055_STRUCT_open_wait_q(info), &wait);
 
+#ifndef RHEL_7_3_514
 	if (extra_count)
 		Z055_STRUCT_inc_ref_count(info);
+#else
+	if (!tty_hung_up_p(filp))
+		Z055_STRUCT_inc_ref_count(info);
+#endif
 
 	Z055_STRUCT_dec_blocked_open(info);
 

@@ -60,6 +60,15 @@
 #define tty_cflags(tty) ((tty)->termios.c_cflag)
 #endif
 
+// RHEL specific changes
+#if defined(RHEL_RELEASE_CODE) && defined(RHEL_RELEASE_VERSION)
+
+#if RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,3)
+#define RHEL_7_3_514 1
+#endif
+
+#endif
+
 /* The queue of BH actions to be performed */
 #define BH_RECEIVE  1
 #define BH_TRANSMIT 2
