@@ -3108,7 +3108,8 @@ static int z055_claim_resources(struct Z055_STRUCT *info)
 	}
 	info->addr_requested = 1;
 
-#if LINUX_VERSION_CODE < VERSION(2,6,26)
+#if LINUX_VERSION_CODE < VERSION(2,6,26) || \
+    LINUX_VERSION_CODE >= KERNEL_VERSION(5,5,0)
 	info->ma_base = ioremap(info->phys_base, info->phys_addr_size);
 #else
 	info->ma_base = ioremap_nocache(info->phys_base, info->phys_addr_size);
