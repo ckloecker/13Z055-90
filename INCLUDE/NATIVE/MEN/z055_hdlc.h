@@ -3,8 +3,6 @@
  *        \file  z055_hdlc.h
  *
  *      \author  Christian.Schuster@men.de
- *        $Date: 2005/02/15 14:36:30 $
- *    $Revision: 2.1 $
  *
  *       \brief  Header file for Z055_HDLC linux driver
  *               containing driver specific IOCTL codes,
@@ -12,20 +10,24 @@
  *               configuring driver and hardware
  *
  *    \switches  none
- *
- * $Id: z055_hdlc.h,v 2.1 2005/02/15 14:36:30 cs Exp $
- */
- /*-------------------------------[ History ]--------------------------------
- *
- * $Log: z055_hdlc.h,v $
- * Revision 2.1  2005/02/15 14:36:30  cs
- * Initial Revision
- *
- *
- *
  *---------------------------------------------------------------------------
- * (c) Copyright 2004 by MEN mikro elektronik GmbH, Nuernberg, Germany
+ * Copyright 2004-2020, MEN Mikro Elektronik GmbH
  ****************************************************************************/
+
+ /*
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef _Z055_DRV_H_
 #define _Z055_DRV_H_
@@ -45,8 +47,7 @@
 #define HDLC_FLAG_TXC_TRANSP		0x1000
 #define HDLC_FLAG_TXC_DTRPIN		0x2000
 #define HDLC_FLAG_TXC_RTSPIN		0x0000
-#define HDLC_FLAG_HDLC_LOOPBACK		0x4000
-
+#define HDLC_FLAG_HDLC_LOOPBACK	0x4000
 
 #define HDLC_CRC_16			0x0000
 #define HDLC_CRC_CCITT		0x0001
@@ -58,9 +59,10 @@
 #define RX_CRC_ERROR			1
 
 #define HDLC_ENCODING_NRZ				0
-#define HDLC_ENCODING_NRZI				1
+#define HDLC_ENCODING_NRZI			1
 #define HDLC_ENCODING_MANCHESTER		2
-#define HDLC_ENCODING_MANCHESTER_NRZI	3
+#define HDLC_ENCODING_MANCHESTER_NRZI		3
+#define HDLC_ENCODING_NRZI_S			4
 
 //#define HDLC_PREAMBLE_LENGTH_8BITS	0
 //#define HDLC_PREAMBLE_LENGTH_16BITS	1
@@ -77,6 +79,9 @@
 #define Z055_MODE_HDLC		2
 
 #define Z055_BUS_TYPE_PCI	1
+
+#define HDLC_FULL_DUPLEX	0
+#define HDLC_HALF_DUPLEX	1
 
 typedef struct _Z055_PARAMS
 {
@@ -98,7 +103,7 @@ typedef struct _Z055_PARAMS
 								 * preset, return error frame */
 	unsigned char	preamble;	/* number of preambles to send */
 								/* preamble currently not supported */
-
+	unsigned char	half_duplex;	/* half-duplex */
 } Z055_PARAMS, *PZ055_PARAMS;
 
 #define Z055_MAX_SERIAL_NUMBER 30
@@ -145,7 +150,6 @@ struct Z055_ICOUNT {
 	__u32	rxlong;
 	__u32	rxok;
 };
-
 
 #define DEBUG_LEVEL_DATA	0x01
 #define DEBUG_LEVEL_ERROR 	0x02

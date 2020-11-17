@@ -2,7 +2,6 @@
 # script to unload the Z055 HDLC device driver and
 # HDLC line discipline driver
 #
-# $Id: unload-drivers.sh,v 1.1 2005/02/15 14:36:23 cs Exp $
 # originally cloned from load-drivers.sh
 # from the Microgate Synclink driver package
 
@@ -19,7 +18,7 @@ if [ ! -f $LSMOD ]; then
     LSMOD=lsmod
 fi
 
-( $LSMOD | grep -i "men_z055_hdlc" >/dev/null) 	&& ${RMMOD} men_z055_hdlc
+( $LSMOD | grep -i "men_lx_z055" >/dev/null) 	&& ${RMMOD} men_lx_z055
 ( $LSMOD | grep -i "n_hdlc"	>/dev/null)	&& ${RMMOD} n_hdlc
 
 

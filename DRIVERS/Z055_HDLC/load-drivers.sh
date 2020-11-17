@@ -2,7 +2,6 @@
 
 # Sample script to load the Z055 HDLC device driver
 #
-# $Id: load-drivers.sh,v 1.1 2005/02/15 14:36:22 cs Exp $
 #
 # Set the device options and select which supporting drivers to load
 # by modifying the script variables below.
@@ -104,28 +103,28 @@ load_and_mknode() {
     DEVICE_GROUP=$5
     DEVICE_MODE=$6
 
-    if [ -z $DRIVER ] ; then
-        echo "Driver name not specified\n"
+    if [ -z "$DRIVER" ] ; then
+        echo "Driver name not specified"
         return 1;
     fi
-    if [ -z $DEVICE_PREFIX ] ; then
-        echo "Device name prefix name not specified\n"
+    if [ -z "$DEVICE_PREFIX" ] ; then
+        echo "Device name prefix name not specified"
         return 1;
     fi
 
     #
     # set defaults if some arguments were not specified
     #
-    if [ -z $DEVICE_GROUP ]; then
+    if [ -z "$DEVICE_GROUP" ]; then
         DEVICE_GROUP=root
     fi
-    if [ -z $DEVICE_MODE ]; then
+    if [ -z "$DEVICE_MODE" ]; then
         DEVICE_MODE=666
     fi
-    if [ -z $NUM_ADAPTERS ]; then
+    if [ -z "$NUM_ADAPTERS" ]; then
         NUM_ADAPTERS=2
     fi
-    if [ -z $NUM_PORTS ]; then
+    if [ -z "$NUM_PORTS" ]; then
        NUM_PORTS=0
     fi
 
@@ -174,7 +173,7 @@ load_and_mknode() {
 
     for device in ${DEVNAMES} ; do
         mknod ${device} c $ttymajor $ttyminor
-        ttyminor=$(($ttyminor + 1))
+        ttyminor=$((ttyminor + 1))
     done
 
     # give appropriate group/permissions
@@ -190,8 +189,6 @@ load_and_mknode() {
 # load drivers
 #--------------------------------------------------------------------------
 
-load_and_mknode men_z055_hdlc ttyTH 2
+load_and_mknode men_lx_z055 ttyTH 2
 
 exit 0;
-
-

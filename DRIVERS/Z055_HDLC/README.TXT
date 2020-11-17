@@ -1,7 +1,6 @@
 ****************************************
 *** MEN Z055 HDLC Adapters for Linux ***
 ****************************************
-# $Id: README.TXT,v 1.1 2005/02/15 14:36:17 cs Exp $
 
 This document describes the MEN family of serial adapters and software support for
 the Linux operating system. The information is organized into the follow sections:

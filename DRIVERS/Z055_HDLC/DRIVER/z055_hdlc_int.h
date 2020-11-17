@@ -3,35 +3,38 @@
  *        \file  z055_hdlc_int.h
  *
  *      \author  Christian.Schuster@men.de
- *        $Date: 2005/02/15 14:36:25 $
- *    $Revision: 1.1 $
  *
  *       \brief  Internal header file for Z055_HDLC linux driver
  *               containing driver internal defines, structures
  *
  *    \switches  none
  *
- * $Id: z055_hdlc_int.h,v 1.1 2005/02/15 14:36:25 cs Exp $
- */
- /*-------------------------------[ History ]--------------------------------
- *
- * $Log: z055_hdlc_int.h,v $
- * Revision 1.1  2005/02/15 14:36:25  cs
- * Initial Revision
- *
- * Revision 1.1  2005/02/15 14:15:25  cs
- * Initial Revision
- *
- *
- *
+
  *---------------------------------------------------------------------------
- * (c) Copyright 2004 by MEN mikro elektronik GmbH, Nuernberg, Germany
+ * Copyright 2004-2020, MEN Mikro Elektronik GmbH
  ****************************************************************************/
+
+ /*
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef _Z055_HDLC_INT_H_
 #define _Z055_HDLC_INT_H_
 
-#include "MEN/z055_hdlc.h"
+#include <MEN/z055_hdlc.h>
+#include <MEN/men_typs.h>
+#include <MEN/maccess.h>
 #define Z055_HDLC_MAGIC 0x5401
 
 /*
@@ -40,15 +43,33 @@
 #define SYSTEM_CLOCK_FREQUENCY	33333333
 #define TX_SWITCH_BUFFERS		2
 
-#define Z055_REGISTER_EXTENT	0x003C	/* maximum value */
-#define Z055_RXBUF_EXTENT		0x800	/* 2kBytes */
-#define Z055_TXBUF_EXTENT		0x800	/* 2kBytes */
+#define Z055_ADDR_SIZE	0x2000		/**< mem size to request for device
+									  *  0x1000 for registers
+									  *  0x0800 RxBuf (2kBytes max)
+									  *  0x0800 TxBuf (2kBytes max)
+									  */
 
 
 #define BOOLEAN int
 #define TRUE 1
 #define FALSE 0
 
+#if LINUX_VERSION_CODE < VERSION(3,7,0)
+#define tty_cflags(tty) ((tty)->termios->c_cflag)
+#else
+#define tty_cflags(tty) ((tty)->termios.c_cflag)
+#endif
+
+// RHEL specific changes
+#if defined(RHEL_RELEASE_CODE) && defined(RHEL_RELEASE_VERSION)
+
+#if RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,3)
+#define RHEL_7_3_514 1
+#endif
+
+#endif
+
+/* The queue of BH actions to be performed */
 #define BH_RECEIVE  1
 #define BH_TRANSMIT 2
 #define BH_STATUS   4
@@ -86,29 +107,34 @@ struct Z055_STRUCT {
 	void	*if_ptr;	/* General purpose pointer (used by SPPP) */
 	int						magic;
 	int						flags;
-	int						count;		/* count of opens */
+
 	int						line;
 	int						hw_version;
-	unsigned short			close_delay;
-	unsigned short			closing_wait;	/* time to wait before closing */
 
 	struct Z055_ICOUNT	icount;
 
 	struct termios			normal_termios;
-
+#if LINUX_VERSION_CODE >= VERSION(2,6,27)
+	struct tty_port port;
+#else
 	struct tty_struct		*tty;
+	int									count;		/* count of opens */
+	unsigned short			close_delay;
+	unsigned short			closing_wait;	/* time to wait before closing */
+	int									blocked_open;	/* # of blocked opens */
+	wait_queue_head_t		open_wait;
+	wait_queue_head_t		close_wait;
+#endif
+
 	int						timeout;
 	int						x_char;		/* xon/xoff character */
-	int						blocked_open;	/* # of blocked opens */
+
 	u16						read_status_mask;
 	u16						ignore_status_mask;
 	unsigned char 			*xmit_buf;
 	int						xmit_head;
 	int						xmit_tail;
 	int						xmit_cnt;
-
-	wait_queue_head_t		open_wait;
-	wait_queue_head_t		close_wait;
 
 	wait_queue_head_t		status_event_wait_q;
 	wait_queue_head_t		event_wait_q;
@@ -152,7 +178,7 @@ struct Z055_STRUCT {
 	unsigned char bus;			/* expansion bus number (zero based) */
 	unsigned char function;		/* PCI device number */
 
-	unsigned int phys_base;		/* base address of adapter */
+	U_INT32_OR_64 phys_base;		/* base address of adapter */
 	unsigned int phys_addr_size;/* size of the I/O address range */
 	int addr_requested;			/* nonzero if I/O address requested */
 
@@ -188,6 +214,65 @@ struct Z055_STRUCT {
 };
 
 /*
+ * define operators on tty values to decouple driver code from
+ * changing value locations of different kernel versions
+ */
+
+#if LINUX_VERSION_CODE >= VERSION(2,6,27)
+#define Z055_STRUCT_set_tty(info, a)          ((info)->port.tty = (a))
+#define Z055_STRUCT_get_tty(info)             ((info)->port.tty)
+#define Z055_STRUCT_ref_count(info)           ((info)->port.count)
+#define Z055_STRUCT_set_ref_count(info, a)    ((info)->port.count = (a))
+#define Z055_STRUCT_inc_ref_count(info)       ((info)->port.count++)
+#define Z055_STRUCT_dec_ref_count(info)       ((info)->port.count--)
+#define Z055_STRUCT_flags(info)               ((info)->port.flags)
+#define Z055_STRUCT_set_flags(info, a)        ((info)->port.flags |= (a))
+#define Z055_STRUCT_clear_flags(info, a)      ((info)->port.flags &= ~(a))
+#define Z055_STRUCT_open_wait_q(info)         ((info)->port.open_wait)
+#if LINUX_VERSION_CODE < VERSION(4,4,0) && !defined(RHEL_7_3_514)
+#define Z055_STRUCT_close_wait_q(info)               ((info)->port.close_wait)
+#endif
+#if LINUX_VERSION_CODE < VERSION(3,9,0)
+#define Z055_STRUCT_set_low_latency(info, a)  ((info)->port.tty->low_latency = (a))
+#else
+#define Z055_STRUCT_set_low_latency(info, a)  ((info)->port.low_latency = (a))
+#endif
+#define Z055_STRUCT_blocked_open(info)        ((info)->port.blocked_open)
+#define Z055_STRUCT_inc_blocked_open(info)    ((info)->port.blocked_open++)
+#define Z055_STRUCT_dec_blocked_open(info)    ((info)->port.blocked_open--)
+#define Z055_STRUCT_get_close_delay(info)     ((info)->port.close_delay)
+#define Z055_STRUCT_set_close_delay(info, a)  ((info)->port.close_delay = (a))
+#define Z055_STRUCT_get_closing_wait(info)    ((info)->port.closing_wait)
+#define Z055_STRUCT_set_closing_wait(info, a) ((info)->port.closing_wait = (a))
+#else
+#define Z055_STRUCT_set_tty(info, a)          ((info)->tty = (a))
+#define Z055_STRUCT_get_tty(info)             ((info)->tty)
+#define Z055_STRUCT_ref_count(info)           ((info)->count)
+#define Z055_STRUCT_set_ref_count(info, a)    ((info)->count = (a))
+#define Z055_STRUCT_inc_ref_count(info)       ((info)->count++)
+#define Z055_STRUCT_dec_ref_count(info)       ((info)->count--)
+#define Z055_STRUCT_flags(info)               ((info)->flags)
+#define Z055_STRUCT_set_flags(info, a)        ((info)->flags |= (a))
+#define Z055_STRUCT_clear_flags(info, a)      ((info)->flags &= ~(a))
+#define Z055_STRUCT_open_wait_q(info)         ((info)->open_wait)
+#define Z055_STRUCT_close_wait_q(info)        ((info)->close_wait)
+#define Z055_STRUCT_set_low_latency(info, a)  ((info)->tty->low_latency = (a))
+#define Z055_STRUCT_blocked_open(info)        ((info)->blocked_open)
+#define Z055_STRUCT_inc_blocked_open(info)    ((info)->blocked_open++)
+#define Z055_STRUCT_dec_blocked_open(info)    ((info)->blocked_open--)
+#define Z055_STRUCT_get_close_delay(info)     ((info)->close_delay)
+#define Z055_STRUCT_set_close_delay(info, a)  ((info)->close_delay = (a))
+#define Z055_STRUCT_get_closing_wait(info)    ((info)->closing_wait)
+#define Z055_STRUCT_set_closing_wait(info, a) ((info)->closing_wait = (a))
+#endif
+
+#if LINUX_VERSION_CODE < VERSION(3,7,0)
+#define tty_cflags(tty) ((tty)->termios->c_cflag)
+#else
+#define tty_cflags(tty) ((tty)->termios.c_cflag)
+#endif
+
+/*
  * These macros define the offsets used in calculating the
  * I/O address of the specified Setup registers.
  */
@@ -200,18 +285,16 @@ struct Z055_STRUCT {
 #define Z055_BCH		0x000A	/* Baud Constant High Word (BCH) */
 #define Z055_BCR		0x000C	/* Baudrate Generator Control Register (BCR) */
 #define Z055_IER		0x0010	/* Interrupt Enable Register (IRER) */
-#define Z055_IRQR	0x0012	/* Interrupt Request Register (IRQR) */
-#define Z055_HSCR	0x0014	/* Handshake Control Register (HSCR) */
-#define Z055_HSSR	0x0016	/* Handshake Status Register (HSSR) */
-#define Z055_RES1	0x0018..0x001F	/* Reserved */
-#define Z055_TXSZR	0x0020	/* Tx Frame Size Register (TXSZR) */
-#define Z055_RXSZR	0x0022	/* Rx Frame Size Register (RXSZR) */
-#define Z055_RES2	0x003C-0x0FFF	/* Reserved */
-#define Z055_RXBUF	0x1000	/* Receive buffer (read only) */
-								/* default: 1 kB used (0xFFF) */
-#define Z055_TXBUF	0x1800	/* Transmit buffer (write only) */
-								/* default: 1 kB used (0xFFF) */
-
+#define Z055_IRQR		0x0012	/* Interrupt Request Register (IRQR) */
+#define Z055_HSCR		0x0014	/* Handshake Control Register (HSCR) */
+#define Z055_HSSR		0x0016	/* Handshake Status Register (HSSR) */
+#define Z055_RES1		0x0018..0x001F	/* Reserved */
+#define Z055_TXSZR		0x0020	/* Tx Frame Size Register (TXSZR) */
+#define Z055_RXSZR		0x0022	/* Rx Frame Size Register (RXSZR) */
+#define Z055_RES2		0x003C-0x0FFF	/* Reserved */
+#define Z055_RXBUF		0x1000	/* Receive buffer (read only) */
+#define Z055_TXBUF		0x1800	/* Transmit buffer (write only) */
+#define Z055_BUF_SIZE		0x0400	/* Buffer Size, default: 1 kB used (0xFFF) */
 /*
  * MACRO DEFINITIONS FOR HDLC CTRL REG
  */
@@ -234,7 +317,7 @@ struct Z055_STRUCT {
 
 #define Z055_HCR_TXIDLE		0x0040	/**< Transmitter state during idle */
 										/**<0: Tx sends flags during idle\n
-										 *  1: Tx sends marking ‘1’ during idle*/
+										 *  1: Tx sends marking Â‘1Â’ during idle*/
 
 #define Z055_HCR_SENDBRK		0x0020	/**< Send Abort */
 										/**<0: No abort is send\n
@@ -266,9 +349,10 @@ struct Z055_STRUCT {
 
 /** Setting of the Encoder and Decoder*/
 #define Z055_CDR_NRZ 		0x0000	/**< Set Rx/Tx to NRZ coded */
-#define Z055_CDR_NRZI 		0x0001	/**< Set Rx/Tx to NRZI coded */
+#define Z055_CDR_NRZI 		0x0001	/**< Set Rx/Tx to NRZI (NRZ-M) coded */
 #define Z055_CDR_MAN		0x0002	/**< Set Rx/Tx to Manchester coded */
-#define Z055_CDR_NRZI_MAN	0x0003	/**< Set Rx/Tx to NRZI–Manch. coded */
+#define Z055_CDR_NRZI_MAN	0x0003	/**< Set Rx/Tx to NRZIÂ–Manch. coded */
+#define Z055_CDR_NRZS		0x0004	/**< Set Rx/Tx to NRZI (NRZ-S) coded */
 
 
 /*
@@ -448,18 +532,17 @@ struct Z055_STRUCT {
  * MACRO DEFINITIONS FOR HANDSHAKE CONTROL REGISTER
  */
 #define Z055_HSCR_RTS	0x0001		/**< RTS control */
-										/**<0: RTS is set to ‘0’\n
-										 *  1: RTS is set to ‘1’*/
+										/**<0: RTS is set to Â‘0Â’\n
+										 *  1: RTS is set to Â‘1Â’*/
 #define Z055_HSCR_DTR	0x0002		/**< DTR control */
-										/**<0: DTR is set to ‘0’\n
-										 *  1: DTR is set to ‘1’*/
+										/**<0: DTR is set to Â‘0Â’\n
+										 *  1: DTR is set to Â‘1Â’*/
 #define Z055_HSCR_HDX	0x0004		/**< Half duplex */
 										/**<0: Interface configured in full
 										 *     duplex\n
 										 *  1: Interface configured in half
 										 *     duplex; HW-flow control will be
 										 *     generated by controller */
-
 
 /*
  * MACRO DEFINITIONS FOR HANDSHAKE STATUS REGISTER
@@ -536,86 +619,11 @@ typedef volatile unsigned  __vu32;
               hw += 4;	\
           }             \
         }
-
-#else /* _PPC_IO_H */
-
+#else
 /************************************
  *         not PPC                  *
  ***********************************/
-
-#ifdef MAC_MEM_MAPPED
-
-typedef unsigned long MACCESS;         /* access pointer */
-
-#define MREAD_D8(ma,offs)			readb((MACCESS)(ma)+(offs))
-#define MREAD_D16(ma,offs)			readw((MACCESS)(ma)+(offs))
-#define MREAD_D32(ma,offs)			readl((MACCESS)(ma)+(offs))
-
-#define MWRITE_D8(ma,offs,val)		writeb(val,(MACCESS)(ma)+(offs))
-#define MWRITE_D16(ma,offs,val)		writew(val,(MACCESS)(ma)+(offs))
-#define MWRITE_D32(ma,offs,val)		writel(val,(MACCESS)(ma)+(offs))
-
-#define MBLOCK_READ_D32(ma,offs,size,dst) \
-        { int sz=size>>2;           \
-          u32 *mem=(u32 *)dst; \
-          unsigned long hw = (MACCESS)(ma)+(offs); \
-          while(sz--){ \
-			  *mem++ = readl( hw );\
-              hw += 4;	\
-          }             \
-        }
-
-#define MBLOCK_WRITE_D32(ma,offs,size,src) \
-        { int sz=(size)>>2;           \
-          u32 *mem=(u32 *)(src); \
-          unsigned long hw = (MACCESS)(ma)+(offs); \
-          while(sz--){ \
-              writel( *mem, hw );\
-              mem++; \
-              hw += 4;	\
-          }             \
-        }
-
-
-#else /* MAC_MEM_MAPPED */
-/*---- I/O mapped hardware ----*/
-typedef unsigned MACCESS;         /* access pointer */
-
-#define MREAD_D8(ma,offs)			inb((MACCESS)(ma)+(offs))
-#define MREAD_D16(ma,offs)			inw((MACCESS)(ma)+(offs))
-#define MREAD_D32(ma,offs)			inl((MACCESS)(ma)+(offs))
-
-#define MWRITE_D8(ma,offs,val)		outb(val,(MACCESS)(ma)+(offs))
-#define MWRITE_D16(ma,offs,val)		outw(val,(MACCESS)(ma)+(offs))
-#define MWRITE_D32(ma,offs,val)		outl(val,(MACCESS)(ma)+(offs))
-
-#define MBLOCK_READ_D32(ma,offs,size,dst) \
-        { int sz=size>>2;           \
-          u32 *mem=(u32 *)dst; \
-          unsigned long hw = (MACCESS)(ma)+(offs); \
-          while(sz--){ \
-			  *mem++ = inl( hw );\
-              hw += 4;	\
-          }             \
-        }
-
-#define MBLOCK_WRITE_D32(ma,offs,size,src) \
-        { int sz=size>>2;           \
-          u32 *mem=(u32 *)src; \
-          unsigned long hw = (MACCESS)(ma)+(offs); \
-          while(sz--){ \
-              outl( *mem, hw );\
-              mem++; \
-              hw += 4;	\
-          }             \
-        }
-
-#endif	/* MAC_MEM_MAPPED */
-
-
-#endif  /* _PPC_IO_H */
-
-#define Z055_ADDR_SIZE	0x3000		/* mem size to request for device */
+#endif
 
 #define Z055_INREG(info, reg) 		MREAD_D16(info->ma_base + info->ma_offs, reg)
 #define Z055_OUTREG(info, reg, val)	MWRITE_D16(info->ma_base + info->ma_offs, reg, val)
@@ -629,3 +637,4 @@ typedef unsigned MACCESS;         /* access pointer */
 
 
 #endif  /* _Z055_HDLC_INT_H_ */
+

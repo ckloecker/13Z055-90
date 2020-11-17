@@ -1,7 +1,6 @@
 =============================
  PPP for Z055 HDLC Adapters
 =============================
-# $Id: README.PPP,v 1.1 2005/02/15 14:36:18 cs Exp $
 
 This document describes the software and procedures necessary to implement
 a PPP connection using Linux and the MEN Z055 HDLC adapter.

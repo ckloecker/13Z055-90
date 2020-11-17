@@ -20,7 +20,8 @@ SYNC=yes
 # If you have only one ppp connection leave this at ppp0.
 # For additional connections use ppp1, ppp2 etc.
 
-DEVICE=ppp0
+DEVICE0=ppp0
+DEVICE1=ppp1
 
 # MODEMPORT is the device name of the Z055_HDLC device.
 #
@@ -29,7 +30,8 @@ DEVICE=ppp0
 # see readme.txt for more information of Z055_HDLC adapter
 # device naming conventions.
 
-MODEMPORT=/dev/ttyTH0
+MODEMPORT0=/dev/ttyTH0
+MODEMPORT1=/dev/ttyTH1
 
 # If this port needs to generate an output clock on the
 # AUXCLK signal, set GENCLOCK to the data rate in bits per
@@ -72,8 +74,10 @@ PPPOPTIONS="passive"
 # Remote and local IP address. Usually only the
 # local IP address is specified.
 
-REMIP=
-IPADDR=192.1.1.195
+REMIP0=
+IPADDR0=192.1.1.195
+REMIP1=
+IPADDR1=192.1.1.196
 
 # Maximum Receive/Transmit Unit size in bytes.
 # Leave blank unless you know what they do,
@@ -108,36 +112,69 @@ else
   echo "Driver men_lx_z055 is loaded!"
 fi
 
-[ -c $MODEMPORT ] || {
-  echo "Z055_HDLC device $MODEMPORT does not exist."
+[ -c $MODEMPORT0 ] || {
+  echo "Z055_HDLC device $MODEMPORT0 does not exist."
   echo "Be sure that Z055_HDLC device driver is loaded"
   echo "and proper device instance is specified."
   exit 1
 }
 
-opts="lock noauth"
+[ -c $MODEMPORT1 ] || {
+  echo "Z055_HDLC device $MODEMPORT1 does not exist."
+  echo "Be sure that Z055_HDLC device driver is loaded"
+  echo "and proper device instance is specified."
+  exit 1
+}
+
+opts0="lock noauth"
 if [ "${HARDFLOWCTL}" = yes ] ; then
-  opts="$opts modem crtscts"
+  opts0="$opts0 modem crtscts"
 else
-  opts="$opts local"
+  opts0="$opts0 local"
 fi
 if [ "${DEFROUTE}" = yes ] ; then
-  opts="$opts defaultroute"
+  opts0="$opts0 defaultroute"
 fi
 if [ -n "${MRU}" ] ; then
   echo "set MRU to $MRU"
-  opts="$opts mru ${MRU}"
+  opts0="$opts0 mru ${MRU}"
 fi
 if [ -n "${MTU}" ] ; then
   echo "set MTU to $MTU"
-  opts="$opts mtu ${MTU}"
+  opts0="$opts0 mtu ${MTU}"
 fi
-if [ -n "${IPADDR}${REMIP}" ] ; then
+if [ -n "${IPADDR0}${REMIP0}" ] ; then
   # if either IP address is set, the following will work.
-  opts="$opts ${IPADDR}:${REMIP}"
+  opts0="$opts0 ${IPADDR0}:${REMIP0}"
 fi
 if [ "${DEBUG}" = yes ] ; then
-  opts="$opts debug"
+  opts0="$opts0 debug"
+  chatdbg="-v"
+fi
+
+opts1="lock noauth"
+if [ "${HARDFLOWCTL}" = yes ] ; then
+  opts1="$opts1 modem crtscts"
+else
+  opts1="$opts1 local"
+fi
+if [ "${DEFROUTE}" = yes ] ; then
+  opts1="$opts1 defaultroute"
+fi
+if [ -n "${MRU}" ] ; then
+  echo "set MRU to $MRU"
+  opts1="$opts1 mru ${MRU}"
+fi
+if [ -n "${MTU}" ] ; then
+  echo "set MTU to $MTU"
+  opts1="$opts1 mtu ${MTU}"
+fi
+if [ -n "${IPADDR1}${REMIP1}" ] ; then
+  # if either IP address is set, the following will work.
+  opts1="$opts1 ${IPADDR1}:${REMIP1}"
+fi
+if [ "${DEBUG}" = yes ] ; then
+  opts1="$opts1 debug"
   chatdbg="-v"
 fi
 
@@ -156,7 +193,9 @@ if [ "$SYNC" = "yes" ]; then
   PORTOPTIONS="hdlc manch+nrzi -loopback crcpreset 1 crcinv"
 
   # add PPPD sync option
-  opts="$opts sync"
+  opts0="$opts0 sync"
+  # add PPPD sync option
+  opts1="$opts1 sync"
 else
   echo "Modes others than synchronous, frame oriented are not supported by this driver"
   exit 1
@@ -176,23 +215,37 @@ fi
 # close) behavior before using 'z055_hdlc_util' to
 # configure the port.
 #-------------------------------------------------------
-stty --file=$MODEMPORT -hupcl
+stty --file=$MODEMPORT0 -hupcl
+stty --file=$MODEMPORT1 -hupcl
 
-echo "z055_hdlc_util cmd:"
-echo "$Z055UTIL $MODEMPORT $PORTOPTIONS"
-$Z055UTIL $MODEMPORT $PORTOPTIONS
+echo "z055_hdlc_util cmd 0:"
+echo "$Z055UTIL $MODEMPORT0 $PORTOPTIONS"
+$Z055UTIL $MODEMPORT0 $PORTOPTIONS
+
+echo "z055_hdlc_util cmd 1:"
+echo "$Z055UTIL $MODEMPORT1 $PORTOPTIONS"
+$Z055UTIL $MODEMPORT1 $PORTOPTIONS
 
 #-------------------------------------------
 # start pppd program with configured options
 #-------------------------------------------
+echo ""
+echo "pppd cmd 0"
+echo "/usr/sbin/pppd -detach $opts0 $MODEMPORT0 ipparam $DEVICE0 ${PPPOPTIONS}"
+echo ""
+echo "pppd cmd 1"
+echo "/usr/sbin/pppd -detach $opts1 $MODEMPORT1 ipparam $DEVICE1 ${PPPOPTIONS}"
+echo ""
 
-echo "pppd cmd"
-echo "/usr/sbin/pppd -detach $opts $MODEMPORT ipparam $DEVICE ${PPPOPTIONS}"
-/usr/sbin/pppd -detach $opts $MODEMPORT \
-  ipparam $DEVICE ${PPPOPTIONS}
+/usr/sbin/pppd -detach $opts0 $MODEMPORT0 ipparam $DEVICE0 ${PPPOPTIONS} &
+PPPD0_PID=$!
+echo "PPPD0_PID: $PPPD0_PID"
+/usr/sbin/pppd -detach $opts1 $MODEMPORT1 ipparam $DEVICE1 ${PPPOPTIONS}
 
+kill $PPPD0_PID
 #-------------------------------------------
 # reset default HUPCL behavior on port after
 # ppp session terminates.
 #-------------------------------------------
-stty --file=$MODEMPORT hupcl
+stty --file=$MODEMPORT0 hupcl
+stty --file=$MODEMPORT1 hupcl

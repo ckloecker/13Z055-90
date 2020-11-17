@@ -7,33 +7,32 @@
  *         \file z055_hdlc_util.c
  *
  *       \author Christian.Schuster@men.de
- *        $Date: 2005/02/15 14:36:27 $
- *    $Revision: 1.1 $
  *
  *       \brief  Tool for setting up Z055_HDLC hardware and driver
  *               The program parses the command line options and issues the
  *               necessary IOCTL call(s) to the driver.
  *
  *     \switches (none)
- */
- /*-------------------------------[ History ]--------------------------------
- *
- * $Log: z055_hdlc_util.c,v $
- * Revision 1.1  2005/02/15 14:36:27  cs
- * Initial Revision
- *
- * Revision 1.1  2005/02/15 14:15:27  cs
- * Initial Revision
- *
- * Revision 1.1  2005/02/15 09:25:37  cs
- * Initial Revision
- *
  *
  *---------------------------------------------------------------------------
- * (c) Copyright 2004 by MEN mikro elektronik GmbH, Nuernberg, Germany
+ * Copyright 2004-2020, MEN Mikro Elektronik GmbH
  ****************************************************************************/
 
-static const char RCSid[]="$Id: z055_hdlc_util.c,v 1.1 2005/02/15 14:36:27 cs Exp $";
+ /*
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 
 #include <stdlib.h>
 #include <fcntl.h>
@@ -445,7 +444,6 @@ int apply_params(char *devname, Z055_PARAMS* params)
 	struct ifreq ifr;
 	int sock;
 	int devnum;
-	int portnum;
 
 	/* open the specified device */
 	fd = open(devname,O_NONBLOCK,0);
@@ -472,7 +470,6 @@ int apply_params(char *devname, Z055_PARAMS* params)
 		return 0;
 	}
 	do {
-		portnum = -1;
 		if (sscanf(devname,"/dev/ttyTH%d",&devnum) == 1 ) {
 			sprintf(ifr.ifr_ifrn.ifrn_name, "z055%d", devnum);
 			break;
