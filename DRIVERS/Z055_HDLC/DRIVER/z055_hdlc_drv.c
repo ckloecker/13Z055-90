@@ -3448,6 +3448,30 @@ static void __exit z055_hdlc_exit(void)
 	int rc;
 	struct Z055_STRUCT *info;
 	struct Z055_STRUCT *tmp;
+	unsigned long flags;
+
+	info = G_z055_device_list;
+
+	printk( "%s(%d): shutting down %s; flags =%x\n",
+		__FUNCTION__, __LINE__, G_driver_name, info->flags);
+
+	spin_lock_irqsave(&info->irq_spinlock,flags);
+
+	z055_hw_DisableMasterIrqBit(info);
+	z055_hw_stop_receiver(info);
+	z055_hw_stop_transmitter(info);
+	z055_hw_DisableInterrupts(info, Z055_IER_RXINVEN   +
+					Z055_IER_RXABRTEN +
+					Z055_IER_RXFCSEEN +
+					Z055_IER_RXRCSTEN +
+					Z055_IER_RXBOVREN +
+					Z055_IER_RXBFLEN +
+                                        Z055_IER_TXBOVREN +
+					Z055_IER_TXBEPYEN +
+					Z055_IER_HSSEN );
+
+	spin_unlock_irqrestore(&info->irq_spinlock,flags);
+
 
 	printk( "%s(%d): Unloading %s: %s\n",
 			__FUNCTION__, __LINE__, G_driver_name,  IdentString);
