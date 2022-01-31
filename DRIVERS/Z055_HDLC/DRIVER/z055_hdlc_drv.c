@@ -3492,8 +3492,7 @@ static void __exit z055_hdlc_exit(void)
 	put_tty_driver(G_serial_driver);
 #endif
 	printk("%s(%d)\n", __FUNCTION__, __LINE__);
-
-	info = G_z055_device_list;
+	
 	while(info) {
 		z055_release_resources(info);
 		tmp = info;
