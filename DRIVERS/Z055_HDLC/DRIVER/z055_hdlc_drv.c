@@ -1083,7 +1083,7 @@ static void shutdown(struct Z055_STRUCT * info)
 	unsigned long flags;
 	struct tty_struct *tty = Z055_STRUCT_get_tty(info);
 
-	if (!(info->flags & ASYNC_INITIALIZED))
+	if (!(Z055_STRUCT_flags(info) & ASYNC_INITIALIZED))
 		return;
 
 	if (debug_level & DEBUG_LEVEL_INFO)
@@ -2364,7 +2364,7 @@ static void z055_wait_until_sent(struct tty_struct *tty, int timeout)
 		return;
 #endif
 
-	if (!(info->flags & ASYNC_INITIALIZED))
+	if (!(Z055_STRUCT_flags(info) & ASYNC_INITIALIZED))
 		goto exit;
 
 	orig_jiffies = jiffies;
@@ -2537,7 +2537,7 @@ static int block_til_ready(struct tty_struct *tty, struct file * filp,
 			break;
 #endif
 
- 		if (!(info->flags & ASYNC_CLOSING) && do_clocal)
+ 		if (!(Z055_STRUCT_flags(info) & ASYNC_CLOSING) && do_clocal)
  			break;
 
 		if (signal_pending(current)) {
@@ -3851,7 +3851,7 @@ static void z055_hw_set_sync_mode( struct Z055_STRUCT *info )
 
 	z055_hw_enable_brgen(info, info->params.baud_rate);
 
-	if (info->flags & HDLC_FLAG_HDLC_LOOPBACK)
+	if (Z055_STRUCT_flags(info) & HDLC_FLAG_HDLC_LOOPBACK)
 		z055_hw_enable_loopback(info,1);
 
 }   /* end of z055_set_sync_mode() */
