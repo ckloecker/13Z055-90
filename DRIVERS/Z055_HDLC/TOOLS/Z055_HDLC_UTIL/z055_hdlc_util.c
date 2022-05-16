@@ -753,51 +753,51 @@ int clr_addrcomp(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 
 int set_compaddr(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 {
-	unsigned char cmpaddr = 0;
+	unsigned int cmpaddr = 0;
 
 	if (argc<2 || !sscanf(argv[1],"%x",&cmpaddr)) {
 		printf("\ncompaddr option requires compare address as hex value\n");
 		return -EINVAL;
 	}
-	params->comp_addr = cmpaddr;
+	params->comp_addr = (unsigned char)cmpaddr;
 	params->flags |= HDLC_FLAG_ADDRCMP; /* address search mode gets enabled*/
 	return 2;
 }	/* end of set_compaddr() */
 
 int set_compbroadc(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 {
-	unsigned char cmpbroadc = 0;
+	unsigned int cmpbroadc = 0;
 
 	if (argc<2 || !sscanf(argv[1],"%x",&cmpbroadc)) {
 		printf("\ncompbroadc option requires compare address as hex value\n");
 		return -EINVAL;
 	}
-	params->comp_broadc = cmpbroadc;
+	params->comp_broadc = (unsigned char)cmpbroadc;
 	params->flags |= HDLC_FLAG_ADDRCMP; /* address search mode gets enabled*/
 	return 2;
 }	/* end of set_compbroadc() */
 
 int set_addrmask(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 {
-	unsigned char addrmask = 0;
+	unsigned int addrmask = 0;
 
 	if (argc<2 || !sscanf(argv[1],"%x",&addrmask)) {
 		printf("\naddrmask option requires compare address mask as hex value\n");
 		return -EINVAL;
 	}
-	params->addr_mask = addrmask;
+	params->addr_mask = (unsigned char)addrmask;
 	return 2;
 }	/* end of set_addrmask() */
 
 int set_broadcmask(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 {
-	unsigned char broadcmask = 0;
+	unsigned int broadcmask = 0;
 
 	if (argc<2 || !sscanf(argv[1],"%x",&broadcmask)) {
 		printf("\nbroadcmask option requires compare address mask as hex value\n");
 		return -EINVAL;
 	}
-	params->broadc_mask = broadcmask;
+	params->broadc_mask = (unsigned char)broadcmask;
 	return 2;
 }	/* end of set_broadcmask() */
 
