@@ -2618,7 +2618,6 @@ static int z055_tty_install(struct tty_driver *driver, struct tty_struct *tty)
 #if LINUX_VERSION_CODE < VERSION(3,7,0)
 	return 0;
 #else
-	printk( "tty_port_install\n");
 	return tty_port_install(&info->port, driver, tty);
 #endif
 }
