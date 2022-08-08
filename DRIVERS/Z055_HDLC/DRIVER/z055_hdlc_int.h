@@ -311,6 +311,9 @@ struct Z055_STRUCT {
 										/**<0: CRC-16 is used
 										 *     (not yet supported by HW)\n
 										 *  1: CRC-CCITT is used */
+#define Z055_HCR_U4STRTFLGS    0x0080  /**< Send one or four start flags */
+                                                                               /**<0: One start flag is sent\n
+                                                                                *  1: Four start flags are sent*/
 #define Z055_HCR_CRCINV		0x0800	/**< CRC inverse */
 										/**<0: CRC is sent not inverted\n
 										 *  1: CRC is sent inverted */

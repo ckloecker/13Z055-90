@@ -3530,6 +3530,12 @@ static void z055_hw_set_sdlc_mode( struct Z055_STRUCT *info )
 									 info->params.broadc_mask);
 		RegValue |= Z055_HCR_ADDRCMPEN;
 	}
+	if ( info->params.flags & HDLC_FLAG_FOUR_START_FLAGS )
+	{
+		RegValue |= Z055_HCR_U4STRTFLGS;
+	} else {
+		RegValue &= ~Z055_HCR_U4STRTFLGS;
+	}
 	if ( info->params.crc_mode & HDLC_CRC_PRESET )
 	{
 		RegValue |= Z055_HCR_CRCPRS;
