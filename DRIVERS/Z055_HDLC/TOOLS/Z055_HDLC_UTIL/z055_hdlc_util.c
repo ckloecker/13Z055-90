@@ -81,6 +81,8 @@ int set_compbroadc(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_addrmask(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_broadcmask(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_baudrate(int argc, char* argv[], char* devname, Z055_PARAMS* params);
+int set_four_start_flags(int argc, char* argv[], char* devname, Z055_PARAMS* params);
+int clr_four_start_flags(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_quiet(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 
 typedef int (*CMD_SET_FUNC)(int argc, char *argv[], char* devname, Z055_PARAMS* params);
@@ -129,6 +131,9 @@ CMD_TABLE_ENTRY cmd_table[] = {
 	{"compbroadc",set_compbroadc},
 	{"addrmask",set_addrmask},
 	{"broadcmask",set_broadcmask},
+
+	{"+fourflags",set_four_start_flags},
+	{"-fourflags",clr_four_start_flags},
 
 	{"quiet",set_quiet},
 };
@@ -278,6 +283,7 @@ void display_usage(char *progName)
 		"crcpreset <0/1>   preset value for crc calculation (0x00/0xFF)\n"
 		"idlemark          send \"ones\" between frames\n"
 		"idleflag          send \"flags\" between frames\n"
+		"[+/-]fourflags    en-/disable sending of four start flags\n"
 		"nrz               set NRZ encoding algorithm\n"
 		"nrzi              set NRZI-M encoding algorithm\n"
 		"nrzi-s            set NRZI-S encoding algorithm\n"
@@ -342,6 +348,11 @@ void display_params(char *devname, Z055_PARAMS* params)
 
 	printf( "    send %s between frames\n",
 			(params->flags & HDLC_FLAG_TXIDLE_MARK) ? "ones" : "flags" );
+
+	if( params->flags & HDLC_FLAG_FOUR_START_FLAGS )
+		printf("    sending four start flags\n");
+	else
+		printf("    sending one start flag\n");
 
 	if( params->flags & HDLC_FLAG_ADDRCMP )
 		printf( "    HDLC frame address and broadcast frame address are compared\n"
@@ -823,6 +834,18 @@ int set_baudrate(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 	params->baud_rate = brate;
 	return 2;
 }	/* end of set_baudrate() */
+
+int set_four_start_flags(int argc, char* argv[], char* devname, Z055_PARAMS* params)
+{
+	params->flags |= HDLC_FLAG_FOUR_START_FLAGS;
+	return 1;
+}	/* end of set_four_start_flags() */
+
+int clr_four_start_flags(int argc, char* argv[], char* devname, Z055_PARAMS* params)
+{
+	params->flags &= ~HDLC_FLAG_FOUR_START_FLAGS;
+	return 1;
+}	/* end of clr_four_start_flags() */
 
 int set_quiet(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 {
