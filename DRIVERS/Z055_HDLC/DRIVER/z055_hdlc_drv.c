@@ -764,7 +764,11 @@ static void z055_isr_transmit( struct Z055_STRUCT *info )
 		}
 		info->drop_rts_on_tx_done = 0;
 	}
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,14,0)
 	if (tty && (tty->stopped || tty->hw_stopped)) {
+#else
+	if (tty && (tty->flow.stopped || tty->hw_stopped)) {
+#endif
 		z055_hw_stop_transmitter(info);
 		return;
 	}
@@ -1346,7 +1350,11 @@ static int z055_write(struct tty_struct *tty, int from_user,
 		printk( KERN_ERR"%s(%d): %s modes others than HDLC are not supported!\n",
 				__FUNCTION__, __LINE__, info->device_name, ret);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,14,0)
 	if (info->xmit_cnt && !tty->stopped && !tty->hw_stopped) {
+#else
+	if (info->xmit_cnt && !tty->flow.stopped && !tty->hw_stopped) {
+#endif
 		spin_lock_irqsave(&info->irq_spinlock,flags);
 		if (!info->tx_active)
 			z055_hw_start_transmitter(info);
