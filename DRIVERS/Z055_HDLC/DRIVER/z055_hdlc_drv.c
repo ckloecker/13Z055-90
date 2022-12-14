@@ -80,10 +80,6 @@
 #include <linux/delay.h>
 #include <linux/ioctl.h>
 
-#if LINUX_VERSION_CODE < VERSION(3,4,0)
-#include <asm/system.h>
-#endif
-
 #include <asm/io.h>
 #include <asm/irq.h>
 #include <asm/bitops.h>
@@ -105,13 +101,7 @@
 #include <linux/uaccess.h>
 #endif
 
-#if LINUX_VERSION_CODE < VERSION(2,6,33)
-#include <linux/autoconf.h>
-#else
 #include <generated/autoconf.h>
-#endif
-
-
 
 #define RCLRVALUE 0xffff
 
@@ -241,11 +231,7 @@ static void z055_free_rtxbuffer_memory( struct Z055_STRUCT *info,
 /*
  * Bottom half interrupt handlers
  */
-#if LINUX_VERSION_CODE < VERSION(2,6,20)
-static void z055_bh_handler(void* context);
-#else
 static void z055_bh_handler(struct work_struct *work);
-#endif
 static void z055_bh_receive(struct Z055_STRUCT *info);
 static void z055_bh_transmit(struct Z055_STRUCT *info);
 static void z055_bh_status(struct Z055_STRUCT *info);
@@ -261,21 +247,8 @@ static void z055_isr_misc( struct Z055_STRUCT *info );
 /*
  * ioctl call handlers
  */
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-static int z055_hw_set_modem_info( struct Z055_STRUCT *info,
-								   unsigned int set,
-								   unsigned int clear);
-static unsigned int z055_hw_get_modem_info(struct Z055_STRUCT * info);
-#else
-#if LINUX_VERSION_CODE < VERSION(2,6,39)
-static int tiocmget(struct tty_struct *tty, struct file *file);
-static int tiocmset(struct tty_struct *tty, struct file *file,
-					unsigned int set, unsigned int clear);
-#else
 static int tiocmget(struct tty_struct *tty);
 static int tiocmset(struct tty_struct *tty, unsigned int set, unsigned int clear);
-#endif
-#endif /* #if   LINUX_VERSION_CODE < VERSION(2,6,0) */
 static int z055_get_stats(struct Z055_STRUCT *info,
 						  struct Z055_ICOUNT *user_icount);
 static int z055_get_params(struct Z055_STRUCT *info,
@@ -319,19 +292,11 @@ static int num_rxbufs[Z055_MAX_DEVICES];
 
 static const char IdentString[]=MENT_XSTR(MAK_REVISION);
 
-#if LINUX_VERSION_CODE > VERSION(2,6,9)
 module_param(break_on_load,int,0);
 module_param(ttymajor,int,0);
 module_param(debug_level,int,0);
 module_param_array(maxframe, int, NULL, 0);
 module_param_array(num_rxbufs, int, NULL, 0);
-#else
-MODULE_PARM(break_on_load,"i");
-MODULE_PARM(ttymajor,"i");
-MODULE_PARM(debug_level,"i");
-MODULE_PARM(maxframe,"1-"   __MODULE_STRING(Z055_MAX_DEVICES) "i");
-MODULE_PARM(num_rxbufs,"1-" __MODULE_STRING(Z055_MAX_DEVICES) "i");
-#endif
 
 MODULE_PARM_DESC(break_on_load, "flag, set breakpoint on module load");
 MODULE_PARM_DESC(ttymajor,  "tty driver major number");
@@ -366,12 +331,6 @@ static struct tty_driver *G_serial_driver;
 static void z055_change_params(struct Z055_STRUCT   *info);
 static void z055_wait_until_sent(struct tty_struct *tty,    int timeout);
 
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-static int G_serial_refcount;
-static struct tty_struct *G_serial_table[Z055_MAX_DEVICES];
-static struct termios *G_serial_termios[Z055_MAX_DEVICES];
-static struct termios *G_serial_termios_locked[Z055_MAX_DEVICES];
-#endif
 
 #ifndef MIN
 #define MIN(a,b)    ((a) < (b) ? (a) : (b))
@@ -396,17 +355,10 @@ static void* z055_get_text_ptr() {return z055_get_text_ptr;}
  * memory if large numbers of serial ports are open.
  */
 static unsigned char *G_tmp_buf;
-#if LINUX_VERSION_CODE < VERSION(2,6,10)
-static DECLARE_MUTEX(G_tmp_buf_sem);
-#endif
 
-static inline int z055_paranoia_check(struct    Z055_STRUCT *info,
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-					kdev_t device,
-#else
-					char *name,
-#endif
-					const char *routine)
+static inline int z055_paranoia_check(struct Z055_STRUCT *info,
+				      char *name,
+				      const char *routine)
 {
 #ifdef Z055_PARANOIA_CHECK
 	static const char *badmagic =
@@ -415,18 +367,10 @@ static inline int z055_paranoia_check(struct    Z055_STRUCT *info,
 		"Warning: null Z055_STRUCT for (%s) in %s\n";
 
 	if (!info) {
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-		printk(badinfo, kdevname(device), routine);
-#else
 		printk(badinfo, name, routine);
-#endif
 		return 1;
-	}Z055_MAGIC)    {
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-		printk(badmagic, kdevname(device), routine);
-#else
+	}Z055_MAGIC) {
 		printk(badmagic, name, routine);
-#endif
 		return 1;
 	}
 #endif
@@ -443,13 +387,8 @@ static void z055_stop(struct    tty_struct *tty)
 	struct Z055_STRUCT *info    = (struct Z055_STRUCT *)tty->driver_data;
 	unsigned long flags;
 
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	if (z055_paranoia_check(info, tty->device, "z055_stop"))
-		return;
-#else
 	if (z055_paranoia_check(info, tty->name,    "z055_stop"))
 		return;
-#endif
 
 	if ( debug_level & DEBUG_LEVEL_INFO )
 		printk("%s(%d): %s\n", __FUNCTION__, __LINE__, info->device_name);
@@ -471,13 +410,8 @@ static void z055_start(struct tty_struct    *tty)
 	struct Z055_STRUCT *info    = (struct Z055_STRUCT *)tty->driver_data;
 	unsigned long flags;
 
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	if (z055_paranoia_check(info, tty->device, "z055_start"))
-		return;
-#else
 	if (z055_paranoia_check(info, tty->name,    "z055_start"))
 		return;
-#endif
 
 	if ( debug_level & DEBUG_LEVEL_INFO )
 		printk("z055_start(%s)\n",info->device_name);
@@ -528,18 +462,9 @@ int z055_bh_action(struct Z055_STRUCT   *info)
 /*
  *  Perform bottom half processing of work items queued by ISR.
  */
-#if LINUX_VERSION_CODE < VERSION(2,6,20)
-static void z055_bh_handler(void* context)
-#else
 static void z055_bh_handler(struct work_struct *work)
-#endif
 {
-#if LINUX_VERSION_CODE < VERSION(2,6,20)
-	struct Z055_STRUCT *info = context;
-#else
 	struct Z055_STRUCT *info = container_of(work, struct Z055_STRUCT, task);
-#endif
-
 	int action;
 
 	if (!info)
@@ -583,9 +508,7 @@ static void z055_bh_receive(struct Z055_STRUCT *info)
 {
 	struct tty_struct *tty = Z055_STRUCT_get_tty(info);
 	unsigned long flags;
-#if LINUX_VERSION_CODE > VERSION(2,6,9)
 	struct tty_ldisc *ld;
-#endif
 
 	if ( debug_level & DEBUG_LEVEL_BH )
 		printk( "%s(%d): %s\n", __FUNCTION__, __LINE__, info->device_name);
@@ -596,54 +519,26 @@ static void z055_bh_receive(struct Z055_STRUCT *info)
 			z055_trace_block( info, info->rx_buffer_q.put_buffer->buffer,
 								MIN(info->rx_buffer_q.put_buffer->ccount, PAGE_SIZE),0);
 
-#if LINUX_VERSION_CODE > VERSION(2,6,9)
 		if (tty) {
 			ld = tty_ldisc_ref(tty);
 			if (ld) {
-#if LINUX_VERSION_CODE < VERSION(2,6,27)
-				if (ld->receive_buf) {
-#else
 				if (ld->ops->receive_buf) {
-#endif
 					/* Call the line discipline receive callback directly. */
 					struct RXTX_BUFFER_S *put_buf = info->rx_buffer_q.put_buffer;
 					if ( debug_level & DEBUG_LEVEL_BH )
 						printk( "%s(%d): %s frame put from buffer addr:0x%08x;"
-								" count:%d; used_bufs:0x%d\n",
-								__FUNCTION__, __LINE__, info->device_name,
-								put_buf->buffer, put_buf->ccount,
-								info->rx_buffer_q.buffers_used);
-#if LINUX_VERSION_CODE < VERSION(2,6,27)
-					ld->receive_buf( tty,
-									info->rx_buffer_q.put_buffer->buffer,
-									NULL,
-				 					info->rx_buffer_q.put_buffer->ccount );
-#else
+							" count:%d; used_bufs:0x%d\n",
+							__FUNCTION__, __LINE__, info->device_name,
+							put_buf->buffer, put_buf->ccount,
+							info->rx_buffer_q.buffers_used);
 					ld->ops->receive_buf( tty,
-									info->rx_buffer_q.put_buffer->buffer,
-									NULL,
-									info->rx_buffer_q.put_buffer->ccount );
-#endif
+							      info->rx_buffer_q.put_buffer->buffer,
+							      NULL,
+							      info->rx_buffer_q.put_buffer->ccount );
 				}
 				tty_ldisc_deref(ld);
 			}
 		}
-#else
-		if (tty && tty->ldisc.receive_buf ) {
-			/* Call the line discipline receive callback directly. */
-			struct RXTX_BUFFER_S *put_buf = info->rx_buffer_q.put_buffer;
-			if ( debug_level & DEBUG_LEVEL_BH )
-				printk( "%s(%d): %s frame put from buffer addr:0x%08x;"
-						" count:%d; used_bufs:0x%d\n",
-						__FUNCTION__, __LINE__, info->device_name,
-						put_buf->buffer, put_buf->ccount,
-						info->rx_buffer_q.buffers_used);
-			tty->ldisc.receive_buf( tty,
-										info->rx_buffer_q.put_buffer->buffer,
-										NULL,
-				 						info->rx_buffer_q.put_buffer->ccount );
-		}
-#endif
 		spin_lock_irqsave(&info->irq_spinlock,flags);
 		info->rx_buffer_q.put_buffer = info->rx_buffer_q.put_buffer->next;
 		info->rx_buffer_q.buffers_used--;
@@ -660,21 +555,12 @@ static void z055_bh_transmit(struct Z055_STRUCT *info)
 			__FUNCTION__, __LINE__, info->device_name);
 
 	if (tty) {
-#if LINUX_VERSION_CODE < VERSION(2,6,27)
-		if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) &&
-			tty->ldisc.write_wakeup) {
-#else
 		if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) &&
 			tty->ldisc->ops->write_wakeup) {
-#endif
 			if ( debug_level & DEBUG_LEVEL_BH )
 				printk( "%s(%d):calling ldisc.write_wakeup on %s\n",
 					__FUNCTION__, __LINE__, info->device_name);
-#if LINUX_VERSION_CODE < VERSION(2,6,27)
-			(tty->ldisc.write_wakeup)(tty);
-#else
 			(tty->ldisc->ops->write_wakeup)(tty);
-#endif
 		}
 		wake_up_interruptible(&tty->write_wait);
 	}
@@ -929,21 +815,11 @@ static void z055_isr_misc( struct Z055_STRUCT *info )
  *
  * Return Value: None
  */
-
-#if LINUX_VERSION_CODE < VERSION(2,6,19)
-static irqreturn_t z055_interrupt(int irq, void *dev_id, struct pt_regs * regs)
-#else
 static irqreturn_t z055_interrupt(int dummy, void *dev_id)
-#endif
 {
 
 	struct Z055_STRUCT *    info;
 	u16 z055_irqr, z055_ier;
-#if LINUX_VERSION_CODE < VERSION(2,6,19)
-	if ( debug_level & DEBUG_LEVEL_ISR )
-		printk( "%s(%d): %d    entry.\n",
-				__FUNCTION__, __LINE__, irq);
-#endif
 	info = (struct Z055_STRUCT *)dev_id;
 	if (!info)
 		return IRQ_NONE;
@@ -995,12 +871,6 @@ static irqreturn_t z055_interrupt(int dummy, void *dev_id)
 	}
 
 	spin_unlock(&info->irq_spinlock);
-
-#if LINUX_VERSION_CODE < VERSION(2,6,19)
-	if ( debug_level & DEBUG_LEVEL_ISR )
-		printk( "%s(%d): %d    exit.\n",
-				__FUNCTION__, __LINE__, irq);
-#endif
 
 	return IRQ_HANDLED;
 }   /* end of z055_interrupt() */
@@ -1172,13 +1042,8 @@ static void z055_change_params(struct Z055_STRUCT *info)
 	unsigned cflag;
 	struct tty_struct *tty = Z055_STRUCT_get_tty(info);
 
-#if LINUX_VERSION_CODE < VERSION(3,7,0)
-	if (!tty || !tty->termios)
-		return;
-#else
 	if (!tty)
 		return;
-#endif
 
 	if (debug_level & DEBUG_LEVEL_INFO)
 		printk( "%s(%d):%s\n", __FUNCTION__, __LINE__, info->device_name );
@@ -1229,22 +1094,15 @@ static void z055_change_params(struct Z055_STRUCT *info)
  *
  * Return Value:    None
  */
-#if LINUX_VERSION_CODE < VERSION(2,6,26)
-static void z055_put_char(struct tty_struct *tty, unsigned char ch)
-#else
 static int z055_put_char(struct tty_struct *tty, unsigned char ch)
-#endif
 {
 	struct Z055_STRUCT *info = (struct Z055_STRUCT *)tty->driver_data;
-#if LINUX_VERSION_CODE > VERSION(2,6,25)
 	int ret = 1;
-#endif
+
 	printk( "%s(%d): function not supported for device %s, ch=%d\n",
 			__FUNCTION__, __LINE__, info->device_name, ch);
 
-#if LINUX_VERSION_CODE > VERSION(2,6,25)
 	return ret;
-#endif
 }   /* end of z055_put_char() */
 
 /* z055_flush_chars()
@@ -1275,14 +1133,8 @@ static void z055_flush_chars(struct tty_struct *tty)
  *
  * Return Value:    number of characters written
  */
-
-#if LINUX_VERSION_CODE > VERSION(2,6,9)
 static int z055_write(struct tty_struct *tty,
 		 const unsigned char *buf, int count)
-#else
-static int z055_write(struct tty_struct *tty, int from_user,
-		 const unsigned char *buf, int count)
-#endif
 {
 	int ret = 0;
 	struct Z055_STRUCT *info = (struct Z055_STRUCT *)tty->driver_data;
@@ -1292,13 +1144,8 @@ static int z055_write(struct tty_struct *tty, int from_user,
 		printk( "%s(%d): %s count=%d\n",
 				__FUNCTION__, __LINE__, info->device_name, count);
 
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	if (z055_paranoia_check(info, tty->device, "z055_write"))
-		goto cleanup;
-#else
 	if (z055_paranoia_check(info, tty->name,    "z055_write"))
 		goto cleanup;
-#endif
 
 	if (!tty || !info->xmit_buf || !G_tmp_buf)
 		goto cleanup;
@@ -1326,26 +1173,8 @@ static int z055_write(struct tty_struct *tty, int from_user,
 		ret = count;
 		info->xmit_cnt = count;
 
-#if LINUX_VERSION_CODE < VERSION(2,6,10)
-		int err;
-		if (from_user) {
-			down(&G_tmp_buf_sem);
-			COPY_FROM_USER(err,G_tmp_buf, buf, count);
-			if (err) {
-				printk( "%s(%d): %s sync user buf copy failed\n",
-						__FUNCTION__, __LINE__, info->device_name);
-				ret = -EFAULT;
-			} else {
-				z055_load_tx_buffer(info,G_tmp_buf,count);
-			}
-			up(&G_tmp_buf_sem);
-		} else {
-			z055_load_tx_buffer(info,buf,count);
-		}
-#else
 		z055_load_tx_buffer(info,buf,count);
 			ret = count;
-#endif
 	} else
 		printk( KERN_ERR"%s(%d): %s modes others than HDLC are not supported!\n",
 				__FUNCTION__, __LINE__, info->device_name, ret);
@@ -1379,13 +1208,8 @@ static int z055_write_room(struct tty_struct    *tty)
 {
 	struct Z055_STRUCT *info    = (struct Z055_STRUCT *)tty->driver_data;
 
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	if (z055_paranoia_check(info, tty->device, "z055_write_room"))
-		return 0;
-#else
 	if (z055_paranoia_check(info, tty->name,    "z055_write_room"))
 		return 0;
-#endif
 
 	if ( debug_level & DEBUG_LEVEL_INFO )
 		printk( "%s(%d): %s\n", __FUNCTION__, __LINE__, info->device_name);
@@ -1415,13 +1239,8 @@ static int z055_chars_in_buffer(struct tty_struct *tty)
 	if (debug_level & DEBUG_LEVEL_INFO)
 		printk( "%s(%d): %s\n", __FUNCTION__, __LINE__, info->device_name );
 
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	if (z055_paranoia_check(info, tty->device, "z055_chars_in_buffer"))
-		return 0;
-#else
 	if (z055_paranoia_check(info, tty->name,    "z055_chars_in_buffer"))
 		return 0;
-#endif
 
 	if (debug_level & DEBUG_LEVEL_INFO)
 		printk( "%s(%d): %s = %d\n",
@@ -1936,31 +1755,20 @@ static int z055_hw_set_modem_info(struct Z055_STRUCT * info,
 	return 0;
 } /* z055_hw_set_modem_info() */
 
-#if LINUX_VERSION_CODE >= VERSION(2,6,0)
 /* return the state of the serial control and status signals
  */
-#if LINUX_VERSION_CODE < VERSION(2,6,39)
-static int tiocmget(struct tty_struct *tty, struct file *file)
-#else
 static int tiocmget(struct tty_struct *tty)
-#endif
 {
 	return(z055_hw_get_modem_info((struct Z055_STRUCT *)tty->driver_data));
 }
 
 /* set modem control signals (DTR/RTS)
  */
-#if LINUX_VERSION_CODE < VERSION(2,6,39)
-static int tiocmset(struct tty_struct *tty, struct file *file,
-			unsigned int set, unsigned int clear)
-#else
 static int tiocmset(struct tty_struct *tty, unsigned int set, unsigned int clear)
-#endif
 {
 	return z055_hw_set_modem_info((struct Z055_STRUCT *)tty->driver_data,
 									 set, clear);
 }
-#endif /* #if   LINUX_VERSION_CODE < VERSION(2,6,0) */
 
 /* z055_break()     Set or clear transmit break condition
  *
@@ -1968,11 +1776,7 @@ static int tiocmset(struct tty_struct *tty, unsigned int set, unsigned int clear
  *          break_state -1=set break condition, 0=clear
  * Return Value:    None
  */
-#if LINUX_VERSION_CODE < VERSION(2,6,27)
-static void z055_break(struct tty_struct *tty, int break_state)
-#else
 static int  z055_break(struct tty_struct *tty, int break_state)
-#endif
 {
 	struct Z055_STRUCT *info = (struct Z055_STRUCT *)tty->driver_data;
 	unsigned long flags;
@@ -1981,21 +1785,8 @@ static int  z055_break(struct tty_struct *tty, int break_state)
 		printk( "%s(%d): %s break = %d\n",
 			 	__FUNCTION__, __LINE__, info->device_name, break_state);
 
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	if (z055_paranoia_check(info, tty->device, "z055_break"))
-#if LINUX_VERSION_CODE > VERSION(2,6,26)
-		return -ENODEV;
-#else
-		return;
-#endif
-#else
 	if (z055_paranoia_check(info, tty->name,    "z055_break"))
-#if LINUX_VERSION_CODE > VERSION(2,6,26)
 		return -ENODEV;
-#else
-		return;
-#endif
-#endif
 
 	spin_lock_irqsave(&info->irq_spinlock,flags);
 	if (break_state == -1)
@@ -2005,10 +1796,7 @@ static int  z055_break(struct tty_struct *tty, int break_state)
 		Z055_OUTREG( info, Z055_HCR,
 					 Z055_INREG( info, Z055_HCR ) & ~Z055_HCR_SENDBRK );
 	spin_unlock_irqrestore(&info->irq_spinlock,flags);
-#if LINUX_VERSION_CODE > VERSION(2,6,26)
 	return 0;
-#endif
-
 }   /* end of z055_break() */
 
 /* z055_ioctl() Service an IOCTL request
@@ -2022,14 +1810,7 @@ static int  z055_break(struct tty_struct *tty, int break_state)
  *
  * Return Value:    0 if success, otherwise error code
  */
-#if LINUX_VERSION_CODE < VERSION(2,6,39)
-static int z055_ioctl(struct tty_struct *tty,
-					  struct file * file,
-					  unsigned int cmd,
-					  unsigned long arg)
-#else
 static int z055_ioctl(struct tty_struct *tty, unsigned int cmd, unsigned long arg)
-#endif
 {
 	struct Z055_STRUCT *info = tty->driver_data;
 
@@ -2037,13 +1818,8 @@ static int z055_ioctl(struct tty_struct *tty, unsigned int cmd, unsigned long ar
 		printk( "%s(%d): %s cmd=%08X\n",
 				__FUNCTION__, __LINE__, info->device_name, cmd );
 
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	if (z055_paranoia_check(info, tty->device, "z055_ioctl"))
-		return -ENODEV;
-#else
 	if (z055_paranoia_check(info, tty->name,    "z055_ioctl"))
 		return -ENODEV;
-#endif
 
 	if ((cmd != TIOCGSERIAL) && (cmd != TIOCSSERIAL) &&
 		(cmd != TIOCMIWAIT) && (cmd != TIOCGICOUNT)) {
@@ -2063,52 +1839,11 @@ static int z055_ioctl_common(struct Z055_STRUCT *info,
 	struct serial_icounter_struct *p_cuser; /* user space */
 	unsigned long flags;
 
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	unsigned int value = 0;
-#endif
-
 	if (debug_level & DEBUG_LEVEL_INFO)
 		printk( "%s(%d): %s cmd=%08X\n",
 				__FUNCTION__, __LINE__, info->device_name, cmd );
 
 	switch (cmd) {
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-		case TIOCMGET:
-		{
-			value = z055_hw_get_modem_info(info);
-			PUT_USER(error,value,(unsigned int *)arg);
-			return error;
-		}
-		case TIOCMBIS:
-		{
-			GET_USER(error,value,(unsigned int *)arg);
-			if (error)
-				return error;
-			return z055_hw_set_modem_info(info,
-											 (value & TIOCM_RTS) |
-											 (value & TIOCM_DTR), 0);
-		}
-		case TIOCMBIC:
-		{
-			GET_USER(error,value,(unsigned int *)arg);
-			if (error)
-				return error;
-			return z055_hw_set_modem_info(info, 0,
-											 (value & TIOCM_RTS) |
-											 (value & TIOCM_DTR) );
-		}
-		case TIOCMSET:
-		{
-			GET_USER(error,value,(unsigned int *)arg);
-			if (error)
-				return error;
-			return z055_hw_set_modem_info(info,
-											 (value & TIOCM_RTS) |
-											 (value & TIOCM_DTR),
-											 (value ^ TIOCM_RTS) |
-											 (value ^ TIOCM_DTR) );
-		}
-#endif
 		case Z055_IOCGPARAMS:
 			return z055_get_params(info,(Z055_PARAMS *)arg);
 		case Z055_IOCSPARAMS:
@@ -2152,13 +1887,9 @@ static int z055_ioctl_common(struct Z055_STRUCT *info,
 	return 0;
 }
 
-#if LINUX_VERSION_CODE < VERSION(2,6,39)
-static long z055_compat_ioctl(struct tty_struct *tty, struct file *file,
-			 unsigned int cmd, unsigned long arg)
-#else
+
 static long z055_compat_ioctl(struct tty_struct *tty,
 			 unsigned int cmd, unsigned long arg)
-#endif
 {
 	int rc = -ENOIOCTLCMD;
 	return rc;
@@ -2175,11 +1906,7 @@ static long z055_compat_ioctl(struct tty_struct *tty,
  *
  * Return Value:        None
  */
-#if LINUX_VERSION_CODE < VERSION(2,6,20)
-static void z055_set_termios(struct tty_struct *tty, struct termios *old_termios)
-#else
 static void z055_set_termios(struct tty_struct *tty, struct ktermios *old_termios)
-#endif
 {
 	struct Z055_STRUCT *info    = (struct Z055_STRUCT *)tty->driver_data;
 	unsigned long flags;
@@ -2243,13 +1970,8 @@ static void z055_close(struct tty_struct    *tty, struct file * filp)
 {
 	struct Z055_STRUCT *    info = (struct Z055_STRUCT *)tty->driver_data;
 
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	if (z055_paranoia_check(info, tty->device, "z055_close"))
-		return;
-#else
 	if (z055_paranoia_check(info, tty->name,    "z055_close"))
 		return;
-#endif
 
 	if (debug_level & DEBUG_LEVEL_INFO)
 		printk( "%s(%d): %s entry, count=%d\n",
@@ -2298,21 +2020,11 @@ static void z055_close(struct tty_struct    *tty, struct file * filp)
 	if (Z055_STRUCT_flags(info) & ASYNC_INITIALIZED)
 		z055_wait_until_sent(tty, info->timeout);
 
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	if (tty->driver.flush_buffer)
-		tty->driver.flush_buffer(tty);
-#else
 	if (tty->driver->ops->flush_buffer)
 		tty->driver->ops->flush_buffer(tty);
-#endif
 
-#if LINUX_VERSION_CODE < VERSION(2,6,27)
-	if (tty->ldisc.flush_buffer)
-		tty->ldisc.flush_buffer(tty);
-#else
 	if (tty->ldisc->ops->flush_buffer)
 		tty->ldisc->ops->flush_buffer(tty);
-#endif
 
 	shutdown(info);
 
@@ -2328,10 +2040,6 @@ static void z055_close(struct tty_struct    *tty, struct file * filp)
 	}
 
 	Z055_STRUCT_clear_flags(info, ASYNC_NORMAL_ACTIVE | ASYNC_CLOSING);
-
-#if LINUX_VERSION_CODE < VERSION(4,4,0) && !defined(RHEL_7_3_514)
-	wake_up_interruptible(&Z055_STRUCT_close_wait_q(info));
-#endif
 
 cleanup:
 	if (debug_level & DEBUG_LEVEL_INFO)
@@ -2364,13 +2072,8 @@ static void z055_wait_until_sent(struct tty_struct *tty, int timeout)
 		printk( "%s(%d): %s entry\n",
 			 	__FUNCTION__, __LINE__, info->device_name );
 
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	if (z055_paranoia_check(info, tty->device, "z055_wait_until_sent"))
-		return;
-#else
 	if (z055_paranoia_check(info, tty->name,    "z055_wait_until_sent"))
 		return;
-#endif
 
 	if (!(Z055_STRUCT_flags(info) & ASYNC_INITIALIZED))
 		goto exit;
@@ -2425,13 +2128,8 @@ static void z055_hangup(struct tty_struct *tty)
 	if (debug_level & DEBUG_LEVEL_INFO)
 		printk("%s(%d): %s\n", __FUNCTION__, __LINE__, info->device_name );
 
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	if (z055_paranoia_check(info, tty->device, "z055_hangup"))
-		return;
-#else
 	if (z055_paranoia_check(info, tty->name,    "z055_hangup"))
 		return;
-#endif
 
 	z055_flush_buffer(tty);
 	shutdown(info);
@@ -2494,13 +2192,9 @@ static int block_til_ready(struct tty_struct *tty, struct file * filp,
 
 	if (debug_level & DEBUG_LEVEL_INFO)
 		printk("%s(%d): before block on %s count=%d\n",
-			 	__FUNCTION__, __LINE__,
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-			tty->driver.name,
-#else
-			tty->driver->name,
-#endif
-			 	Z055_STRUCT_ref_count(info) );
+				__FUNCTION__, __LINE__,
+				tty->driver->name,
+				Z055_STRUCT_ref_count(info) );
 
 	spin_lock_irqsave(&info->irq_spinlock, flags);
 #ifndef RHEL_7_3_514
@@ -2534,16 +2228,8 @@ static int block_til_ready(struct tty_struct *tty, struct file * filp,
 		z055_hw_get_serial_signals(info);
 		spin_unlock_irqrestore(&info->irq_spinlock,flags);
 
-
-#if LINUX_VERSION_CODE < VERSION(4,4,0) && !defined(RHEL_7_3_514)
-		if (!(Z055_STRUCT_flags(info) & ASYNC_CLOSING) &&
-				do_clocal ) {
-			break;
-		}
-#else
 		if (do_clocal)
 			break;
-#endif
 
  		if (!(Z055_STRUCT_flags(info) & ASYNC_CLOSING) && do_clocal)
  			break;
@@ -2576,11 +2262,7 @@ static int block_til_ready(struct tty_struct *tty, struct file * filp,
 	if (debug_level & DEBUG_LEVEL_INFO)
 		printk( "%s(%d): after blocking on %s count=%d\n",
 				__FUNCTION__, __LINE__,
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-				tty->driver.name,
-#else
 				tty->driver->name,
-#endif
 				Z055_STRUCT_ref_count(info) );
 
 	if (!retval)
@@ -2599,11 +2281,7 @@ static int z055_tty_install(struct tty_driver *driver, struct tty_struct *tty)
 	info = G_z055_device_list;
 
 	/* verify range of specified line number */
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	line = MINOR(tty->device) - tty->driver.minor_start;
-#else
 	line = tty->index;
-#endif
 
 	while(info && info->line != line) {
 		info = info->next_device;
@@ -2623,12 +2301,8 @@ static int z055_tty_install(struct tty_driver *driver, struct tty_struct *tty)
 
 	tty->driver_data = info;
 
-#if LINUX_VERSION_CODE < VERSION(3,7,0)
-	return 0;
-#else
 	printk( "tty_port_install\n");
 	return tty_port_install(&info->port, driver, tty);
-#endif
 }
 
 /* z055_open()
@@ -2648,23 +2322,12 @@ static int z055_open(struct tty_struct *tty, struct file * filp)
 	unsigned long   page;
 
 	/* verify range of specified line number */
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	line = MINOR(tty->device) - tty->driver.minor_start;
-#else
 	line = tty->index;
-#endif
 	if ((line < 0) || (line >= G_z055_device_count))    {
 		printk( "%s(%d): invalid line #%d.\n",
 				__FUNCTION__, __LINE__, line);
 		return -ENODEV;
 	}
-
-#if LINUX_VERSION_CODE < VERSION(3,7,0)
-	/* this is called from tty layer starting with 3.7 kernels */
-	retval = z055_tty_install(serial_driver, tty);
-	if (retval)
-		return retval;
-#endif
 
 	/* find the info structure for the specified line */
 	info = G_z055_device_list;
@@ -2672,13 +2335,8 @@ static int z055_open(struct tty_struct *tty, struct file * filp)
 		info = info->next_device;
 	}
 
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	if (z055_paranoia_check(info, tty->device, "z055_open"))
-		return -ENODEV;
-#else
 	if (z055_paranoia_check(info, tty->name,    "z055_open"))
 		return -ENODEV;
-#endif
 
 	tty->driver_data = info;
 	Z055_STRUCT_set_tty(info, tty);
@@ -2686,28 +2344,8 @@ static int z055_open(struct tty_struct *tty, struct file * filp)
 	if (debug_level & DEBUG_LEVEL_INFO)
 		printk( "%s(%d): %s, old ref count = %d\n",
 				__FUNCTION__, __LINE__,
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-				tty->driver.name,
-#else
 				tty->driver->name,
-#endif
 				Z055_STRUCT_ref_count(info));
-
-#if LINUX_VERSION_CODE < VERSION(4,4,0) && !defined(RHEL_7_3_514)
-	/* If port is closing, signal caller to try again */
-	if (tty_hung_up_p(filp) || Z055_STRUCT_flags(info) & ASYNC_CLOSING){
-#if LINUX_VERSION_CODE < VERSION(3,15,0)
-		if (Z055_STRUCT_flags(info) & ASYNC_CLOSING)
-			interruptible_sleep_on(&Z055_STRUCT_close_wait_q(info));
-#else
-		wait_event_interruptible_tty(tty, info->port.close_wait,
-					     !(info->port.flags & ASYNC_CLOSING));
-#endif
-		retval = ((Z055_STRUCT_flags(info) & ASYNC_HUP_NOTIFY) ?
-			-EAGAIN : -ERESTARTSYS);
-		goto cleanup;
-	}
-#endif
 
 	if (!G_tmp_buf) {
 		page = get_zeroed_page(GFP_KERNEL);
@@ -2763,142 +2401,6 @@ cleanup:
 /*
  * /proc fs routines....
  */
-
-#if LINUX_VERSION_CODE < VERSION(2,6,30)
-/*
- * proc fs support
- */
-static inline int line_info(char *buf, struct Z055_STRUCT *info)
-{
-	char stat_buf[30];
-	int ret = 0;
-	unsigned long flags;
-
-	if (debug_level & DEBUG_LEVEL_INFO)
-		printk( "%s(%d): %s\n",
-				__FUNCTION__, __LINE__, info->device_name);
-
-	if (info->bus_type == Z055_BUS_TYPE_PCI)    {
-		if( !info->ma_base ) {
-			ret = sprintf( buf, "%s: Device not opened yet ==> "
-								"no ressources claimed\n",
-						   info->device_name);
-			return ret;
-		}
-		ret = sprintf(buf, "%s: PCI ma_base:%04X irq:%d\n",
-					info->device_name, info->ma_base + info->ma_offs, info->irq);
-	}
-
-	/* output current serial signal states */
-	spin_lock_irqsave(&info->irq_spinlock,flags);
-	z055_hw_get_serial_signals(info);
-	spin_unlock_irqrestore(&info->irq_spinlock,flags);
-
-	stat_buf[0] = 0;
-	stat_buf[1] = 0;
-	if (info->serial_signals & SerialSignal_RTS)
-		strcat(stat_buf, "|RTS");
-	if (info->serial_signals & SerialSignal_CTS)
-		strcat(stat_buf, "|CTS");
-	if (info->serial_signals & SerialSignal_DTR)
-		strcat(stat_buf, "|DTR");
-	if (info->serial_signals & SerialSignal_DSR)
-		strcat(stat_buf, "|DSR");
-
-	if (info->params.mode == Z055_MODE_HDLC ) {
-		ret += sprintf(buf+ret, " HDLC txok:%d rxok:%d",
-				  info->icount.txok, info->icount.rxok);
-		if (info->icount.rxrcst)
-			ret += sprintf(buf+ret, " rxrcst:%d", info->icount.rxrcst);
-		if (info->icount.rxlong)
-			ret += sprintf(buf+ret, " rxlong:%d", info->icount.rxlong);
-		if (info->icount.rxbover)
-			ret += sprintf(buf+ret, " rxbover:%d", info->icount.rxbover);
-		if (info->icount.rxcrc)
-			ret += sprintf(buf+ret, " rxcrc:%d", info->icount.rxcrc);
-		if (info->icount.rxcrc)
-			ret += sprintf(buf+ret, " rxabort:%d", info->icount.rxabort);
-	}
-	/* Append serial signal status to end */
-	ret += sprintf(buf+ret, " %s\n", stat_buf+1);
-
-	spin_lock_irqsave(&info->irq_spinlock,flags);
-	{
-		u16 hcr		= Z055_INREG( info, Z055_HCR );
-		u16 cdr		= Z055_INREG( info, Z055_CDR );
-		u16 acr		= Z055_INREG( info, Z055_ACR );
-		u16 amr		= Z055_INREG( info, Z055_AMR );
-		u16 bcl		= Z055_INREG( info, Z055_BCL );
-		u16 bch		= Z055_INREG( info, Z055_BCH );
-		u16 bcr		= Z055_INREG( info, Z055_BCR );
-		u16 ier		= Z055_INREG( info, Z055_IER );
-		u16 irqr	= Z055_INREG( info, Z055_IRQR );
-		u16 hscr 	= Z055_INREG( info, Z055_HSCR );
-		u16 hssr	= Z055_INREG( info, Z055_HSSR );
-		u16 txszr	= Z055_INREG( info, Z055_TXSZR );
-		u16 rxszr	= Z055_INREG( info, Z055_RXSZR );
-		ret += sprintf( buf+ret, "hcr  =%04X cdr =%04X acr  =%04X amr=%04X\n"
-								 "bcl  =%04X bch =%04X bcr  =%04X\n"
-								 "ier  =%04X irqr=%04X hscr =%04X hssr=%04X\n"
-								 "txszr= %04X          rxszr=%04X\n",
-						hcr, cdr, acr, amr, bcl, bch, bcr,
-						ier, irqr, hscr, hssr, txszr, rxszr );
-	}
-	ret += sprintf( buf+ret, "txactive=%d bh_req=%d  bh_run=%d   pending_bh=%x\n",
-					info->tx_active,info->bh_requested,info->bh_running,
-					info->pending_bh);
-
-	spin_unlock_irqrestore(&info->irq_spinlock,flags);
-
-	return ret;
-}   /* end of line_info() */
-
-/* z055_read_proc()
- *
- * Called to print information about devices
- *
- * Arguments:
- *  page    page of memory to hold returned info
- *  start
- *  off
- *  count
- *  eof
- *  data
- *
- * Return Value:
- */
-int z055_read_proc(char *page, char **start, off_t off, int count,
-		 int *eof, void *data)
-{
-	int len = 0, l;
-	off_t   begin = 0;
-	struct Z055_STRUCT *info;
-
-	len += sprintf(page, "Z055 HDLC driver:%s\n", IdentString);
-
-	info = G_z055_device_list;
-	while( info ) {
-		l = line_info(page + len, info);
-		len += l;
-		if (len+begin > off+count)
-			goto done;
-		if (len+begin < off) {
-			begin += len;
-			len = 0;
-		}
-		info = info->next_device;
-	}
-
-	*eof = 1;
-done:
-	if (off >= len+begin)
-		return 0;
-	*start = page + (off-begin);
-	return ((count < begin+len-off) ? count : begin+len-off);
-
-}   /* end of z055_read_proc() */
-
-#else
 static inline void line_info(struct seq_file *m, struct Z055_STRUCT *info)
 {
 	char stat_buf[30];
@@ -3011,7 +2513,6 @@ static const struct file_operations z055_proc_fops = {
 	.release	= single_release,
 };
 #endif // linux version < 4.18
-#endif // linux version < 2.6.30
 
 /*
  * z055_alloc_rtxbuffer_memory()
@@ -3116,8 +2617,7 @@ static int z055_claim_resources(struct Z055_STRUCT *info)
 	}
 	info->addr_requested = 1;
 
-#if LINUX_VERSION_CODE < VERSION(2,6,26) || \
-    LINUX_VERSION_CODE >= KERNEL_VERSION(5,5,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,5,0)
 	info->ma_base = ioremap(info->phys_base, info->phys_addr_size);
 #else
 	info->ma_base = ioremap_nocache(info->phys_base, info->phys_addr_size);
@@ -3275,20 +2775,12 @@ struct Z055_STRUCT* z055_allocate_device()
 	} else {
 		memset(info, 0, sizeof(struct Z055_STRUCT));
 		info->magic = Z055_HDLC_MAGIC;
-#if LINUX_VERSION_CODE < VERSION(2,6,20)
-		INIT_WORK(&info->task, z055_bh_handler, info);
-#else
 		INIT_WORK(&info->task, z055_bh_handler);
-#endif
 		info->max_frame_size = HDLC_MAX_FRAME_SIZE;
 		Z055_STRUCT_set_close_delay(info, 5*HZ/10);
 		Z055_STRUCT_set_closing_wait(info,30*HZ);
-#if LINUX_VERSION_CODE >= VERSION(2,6,27)
+
 		tty_port_init(&info->port);
-#else
-		init_waitqueue_head(&info->open_wait);
-		init_waitqueue_head(&info->close_wait);
-#endif
 		init_waitqueue_head(&info->status_event_wait_q);
 		init_waitqueue_head(&info->event_wait_q);
 		spin_lock_init(&info->irq_spinlock);
@@ -3303,9 +2795,7 @@ struct Z055_STRUCT* z055_allocate_device()
 }   /* end of z055_allocate_device()*/
 
 static struct tty_operations ops = {
-#if LINUX_VERSION_CODE >= VERSION(3,7,0)
 	.install = z055_tty_install,
-#endif
 	.tiocmget = tiocmget,
 	.tiocmset = tiocmset,
 	.open = z055_open,
@@ -3317,9 +2807,7 @@ static struct tty_operations ops = {
 	.chars_in_buffer = z055_chars_in_buffer,
 	.flush_buffer = z055_flush_buffer,
 	.ioctl = z055_ioctl,
-#if LINUX_VERSION_CODE > VERSION(2,6,21)
 	.compat_ioctl = z055_compat_ioctl,
-#endif
 	.throttle = z055_throttle,
 	.unthrottle = z055_unthrottle,
 	.send_xchar = z055_send_xchar,
@@ -3329,14 +2817,10 @@ static struct tty_operations ops = {
 	.stop = z055_stop,
 	.start = z055_start,
 	.hangup = z055_hangup,
-#if LINUX_VERSION_CODE > VERSION(2,6,29)
 #if LINUX_VERSION_CODE < VERSION(4,18,0)
 	.proc_fops = &z055_proc_fops,
 #else
 	.proc_show = z055_proc_show,
-#endif
-#else
-	.read_proc = read_proc,
 #endif
 };
 
@@ -3349,27 +2833,10 @@ int z055_init_tty()
 	if ( debug_level & DEBUG_LEVEL_INFO )
 		printk( "%s(%d)\n", __FUNCTION__, __LINE__   );
 
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	memset(G_serial_table,0,sizeof(struct tty_struct*)*Z055_MAX_DEVICES);
-	memset(G_serial_termios,0,sizeof(struct termios*)*Z055_MAX_DEVICES);
-	memset(G_serial_termios_locked,0,sizeof(struct termios*)*Z055_MAX_DEVICES);
-
-	G_serial_driver = kmalloc(sizeof(struct tty_driver), GFP_KERNEL);
-	if (!G_serial_driver)
-		return -ENOMEM;
-	memset(G_serial_driver, 0, sizeof(struct tty_driver));
-	G_serial_driver->magic = TTY_DRIVER_MAGIC;
-	G_serial_driver->num = G_z055_device_count;
-	G_serial_driver->refcount = &G_serial_refcount;
-	G_serial_driver->table = G_serial_table;
-	G_serial_driver->termios = G_serial_termios;
-	G_serial_driver->termios_locked = G_serial_termios_locked;
-#else  /* #if   LINUX_VERSION_CODE < VERSION(2,6,0) */
 	G_serial_driver = alloc_tty_driver(G_z055_device_count);
 	if (!G_serial_driver)
 		return -ENOMEM;
 	G_serial_driver->owner = THIS_MODULE;
-#endif /* #if   LINUX_VERSION_CODE < VERSION(2,6,0) */
 
 	G_serial_driver->driver_name = "men_lx_z055";
 	G_serial_driver->name = "ttyTH";
@@ -3379,10 +2846,8 @@ int z055_init_tty()
 	G_serial_driver->subtype = SERIAL_TYPE_NORMAL;
 	G_serial_driver->init_termios = tty_std_termios;
 	G_serial_driver->init_termios.c_cflag = B9600 | CS8 | CREAD | HUPCL | CLOCAL;
-#if LINUX_VERSION_CODE > VERSION(2,6,19)
 	G_serial_driver->init_termios.c_ispeed = 9600;
 	G_serial_driver->init_termios.c_ospeed = 9600;
-#endif
 	G_serial_driver->flags = TTY_DRIVER_REAL_RAW;
 	tty_set_operations(G_serial_driver, &ops);
 	if (tty_register_driver(G_serial_driver) < 0)
@@ -3392,17 +2857,6 @@ int z055_init_tty()
 	printk("%s %s, tty major#%d\n",
 		G_driver_name, IdentString,
 		G_serial_driver->major);
-
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	do{
-		/* Propagate these values to all device instances */
-		struct Z055_STRUCT *info = G_z055_device_list;
-		while(info){
-			info->normal_termios  = G_serial_driver->init_termios;
-			info = info->next_device;
-		}
-	} while(0);
-#endif
 
 	return 0;
 } /* end of z055_init_tty */
@@ -3469,12 +2923,7 @@ static void __exit z055_hdlc_exit(void)
 				__FUNCTION__, __LINE__, rc);
 
 	printk("%s(%d)\n", __FUNCTION__, __LINE__);
-
-#if LINUX_VERSION_CODE < VERSION(2,6,0)
-	kfree(G_serial_driver);
-#else
 	put_tty_driver(G_serial_driver);
-#endif
 	printk("%s(%d)\n", __FUNCTION__, __LINE__);
 
 	info = G_z055_device_list;
@@ -4167,11 +3616,7 @@ static void z055_tx_timeout(struct timer_list *t)
 
 }   /* end of z055_tx_timeout() */
 
-#if LINUX_VERSION_CODE < VERSION(3,8,0)
-static int __devinit z055_init_one (CHAMELEON_UNIT_T *chu)
-#else
 static int z055_init_one (CHAMELEON_UNIT_T *chu)
-#endif
 {
 	struct Z055_STRUCT *info;
 	int ioMapped = 0;
@@ -4192,11 +3637,7 @@ static int z055_init_one (CHAMELEON_UNIT_T *chu)
 
 	info->bus_type = Z055_BUS_TYPE_PCI;
 	info->phys_addr_size = Z055_ADDR_SIZE;
-#if LINUX_VERSION_CODE < VERSION(2,6,18)
-		info->irq_flags = SA_SHIRQ;
-#else
-		info->irq_flags = IRQF_SHARED;
-#endif
+	info->irq_flags = IRQF_SHARED;
 
 	/*--- are we io-mapped ? ---*/
 	ioMapped = pci_resource_flags( chu->pdev, chu->bar ) & IORESOURCE_IO;
@@ -4234,11 +3675,7 @@ static int z055_init_one (CHAMELEON_UNIT_T *chu)
 	return 0;
 }
 
-#if LINUX_VERSION_CODE < VERSION(3,8,0)
-static int __devexit z055_remove_one (CHAMELEON_UNIT_T *chu)
-#else
 static int z055_remove_one (CHAMELEON_UNIT_T *chu)
-#endif
 {
 	return 0;
 }
