@@ -213,7 +213,6 @@ struct Z055_STRUCT {
 #define Z055_STRUCT_set_flags(info, a)        ((info)->port.flags |= (a))
 #define Z055_STRUCT_clear_flags(info, a)      ((info)->port.flags &= ~(a))
 #define Z055_STRUCT_open_wait_q(info)         ((info)->port.open_wait)
-#define Z055_STRUCT_set_low_latency(info, a)  ((info)->port.low_latency = (a))
 #define Z055_STRUCT_blocked_open(info)        ((info)->port.blocked_open)
 #define Z055_STRUCT_inc_blocked_open(info)    ((info)->port.blocked_open++)
 #define Z055_STRUCT_dec_blocked_open(info)    ((info)->port.blocked_open--)

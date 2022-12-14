@@ -2359,11 +2359,6 @@ static int z055_open(struct tty_struct *tty, struct file * filp)
 			G_tmp_buf = (unsigned char *) page;
 	}
 
-	if (Z055_STRUCT_flags(info) & ASYNC_LOW_LATENCY)
-		Z055_STRUCT_set_low_latency(info, 1);
-	else
-		Z055_STRUCT_set_low_latency(info, 0);
-
 	Z055_STRUCT_inc_ref_count(info);
 
 	if (Z055_STRUCT_ref_count(info) == 1) {
