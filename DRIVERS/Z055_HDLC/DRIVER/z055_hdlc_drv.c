@@ -2831,7 +2831,7 @@ int z055_init_tty()
 	if ( debug_level & DEBUG_LEVEL_INFO )
 		printk( "%s(%d)\n", __FUNCTION__, __LINE__   );
 
-	G_serial_driver = alloc_tty_driver(G_z055_device_count);
+	G_serial_driver = tty_alloc_driver(G_z055_device_count, 0);
 	if (!G_serial_driver)
 		return -ENOMEM;
 	G_serial_driver->owner = THIS_MODULE;
