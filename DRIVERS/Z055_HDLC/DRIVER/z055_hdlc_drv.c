@@ -2916,9 +2916,13 @@ static void __exit z055_hdlc_exit(void)
 			__FUNCTION__, __LINE__,
 			G_serial_driver->driver_name, G_serial_driver->name);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,14,0)
 	if ((rc = tty_unregister_driver(G_serial_driver)))
 		printk( "%s(%d): failed to unregister tty driver err=%d\n",
 				__FUNCTION__, __LINE__, rc);
+#else
+	tty_unregister_driver(G_serial_driver);
+#endif
 
 	printk("%s(%d)\n", __FUNCTION__, __LINE__);
 	tty_driver_kref_put(G_serial_driver);
