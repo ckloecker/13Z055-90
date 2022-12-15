@@ -893,7 +893,7 @@ static int startup(struct Z055_STRUCT * info)
 		printk( "%s(%d): %s\n",
 				__FUNCTION__, __LINE__, info->device_name);
 
-	if (Z055_STRUCT_flags(info) & ASYNC_INITIALIZED)
+	if (tty_port_initialized(&info->port))
 		return 0;
 
 	if (!info->xmit_buf) {
@@ -939,7 +939,7 @@ static int startup(struct Z055_STRUCT * info)
 	if (tty)
 		clear_bit(TTY_IO_ERROR, &tty->flags);
 
-	Z055_STRUCT_set_flags(info, ASYNC_INITIALIZED);
+	tty_port_set_initialized(&info->port, 1);
 
 	return 0;
 
@@ -957,7 +957,7 @@ static void shutdown(struct Z055_STRUCT * info)
 	unsigned long flags;
 	struct tty_struct *tty = Z055_STRUCT_get_tty(info);
 
-	if (!(Z055_STRUCT_flags(info) & ASYNC_INITIALIZED))
+	if (!tty_port_initialized(&info->port))
 		return;
 
 	if (debug_level & DEBUG_LEVEL_INFO)
@@ -1000,7 +1000,7 @@ static void shutdown(struct Z055_STRUCT * info)
 	if (tty)
 		set_bit(TTY_IO_ERROR, &tty->flags);
 
-	Z055_STRUCT_clear_flags(info, ASYNC_INITIALIZED);
+	tty_port_set_initialized(&info->port, 0);
 
 }   /* end of shutdown() */
 
@@ -2000,8 +2000,6 @@ static void z055_close(struct tty_struct    *tty, struct file * filp)
 	if (Z055_STRUCT_ref_count(info))
 		goto cleanup;
 
-	Z055_STRUCT_set_flags(info, ASYNC_CLOSING);
-
 	/* set tty->closing to notify line discipline to
 	 * only process XON/XOFF characters. Only the N_TTY
 	 * discipline appears to use this (ppp does not).
@@ -2017,7 +2015,7 @@ static void z055_close(struct tty_struct    *tty, struct file * filp)
 		tty_wait_until_sent(tty, Z055_STRUCT_get_closing_wait(info));
 	}
 
-	if (Z055_STRUCT_flags(info) & ASYNC_INITIALIZED)
+	if (tty_port_initialized(&info->port))
 		z055_wait_until_sent(tty, info->timeout);
 
 	if (tty->driver->ops->flush_buffer)
@@ -2039,7 +2037,7 @@ static void z055_close(struct tty_struct    *tty, struct file * filp)
 		wake_up_interruptible(&Z055_STRUCT_open_wait_q(info));
 	}
 
-	Z055_STRUCT_clear_flags(info, ASYNC_NORMAL_ACTIVE | ASYNC_CLOSING);
+	tty_port_set_active(&info->port, 0);
 
 cleanup:
 	if (debug_level & DEBUG_LEVEL_INFO)
@@ -2075,7 +2073,7 @@ static void z055_wait_until_sent(struct tty_struct *tty, int timeout)
 	if (z055_paranoia_check(info, tty->name,    "z055_wait_until_sent"))
 		return;
 
-	if (!(Z055_STRUCT_flags(info) & ASYNC_INITIALIZED))
+	if (!tty_port_initialized(&info->port))
 		goto exit;
 
 	orig_jiffies = jiffies;
@@ -2135,7 +2133,7 @@ static void z055_hangup(struct tty_struct *tty)
 	shutdown(info);
 
 	Z055_STRUCT_set_ref_count(info, 0);
-	Z055_STRUCT_clear_flags(info, ASYNC_NORMAL_ACTIVE);
+	tty_port_set_active(&info->port, 0);
 	Z055_STRUCT_set_tty(info, NULL);
 
 	wake_up_interruptible(&Z055_STRUCT_open_wait_q(info));
@@ -2173,7 +2171,7 @@ static int block_til_ready(struct tty_struct *tty, struct file * filp,
 		 );
 	if (filp->f_flags & O_NONBLOCK || tty->flags & (1 << TTY_IO_ERROR)){
 		/* nonblock mode is set or port is not enabled */
-		Z055_STRUCT_set_flags(info, ASYNC_NORMAL_ACTIVE);
+		tty_port_set_active(&info->port, 1);
 		return 0;
 	}
 
@@ -2218,7 +2216,7 @@ static int block_til_ready(struct tty_struct *tty, struct file * filp,
 
 		set_current_state(TASK_INTERRUPTIBLE);
 
-		if (tty_hung_up_p(filp) || !(Z055_STRUCT_flags(info) & ASYNC_INITIALIZED)){
+		if (tty_hung_up_p(filp) || !tty_port_initialized(&info->port)){
 			retval = (Z055_STRUCT_flags(info) & ASYNC_HUP_NOTIFY) ?
 					-EAGAIN : -ERESTARTSYS;
 			break;
@@ -2230,9 +2228,6 @@ static int block_til_ready(struct tty_struct *tty, struct file * filp,
 
 		if (do_clocal)
 			break;
-
- 		if (!(Z055_STRUCT_flags(info) & ASYNC_CLOSING) && do_clocal)
- 			break;
 
 		if (signal_pending(current)) {
 			retval = -ERESTARTSYS;
@@ -2266,7 +2261,7 @@ static int block_til_ready(struct tty_struct *tty, struct file * filp,
 				Z055_STRUCT_ref_count(info) );
 
 	if (!retval)
-		Z055_STRUCT_set_flags(info, ASYNC_NORMAL_ACTIVE);
+		tty_port_set_active(&info->port, 1);
 
 	return retval;
 
