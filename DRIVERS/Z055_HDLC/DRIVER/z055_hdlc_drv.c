@@ -1204,7 +1204,11 @@ cleanup:
  * Arguments:       tty pointer to tty info structure
  * Return Value:    None
  */
-static int z055_write_room(struct tty_struct    *tty)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,14,0)
+static int z055_write_room(struct tty_struct *tty)
+#else
+static unsigned int z055_write_room(struct tty_struct *tty)
+#endif
 {
 	struct Z055_STRUCT *info    = (struct Z055_STRUCT *)tty->driver_data;
 
@@ -1232,7 +1236,11 @@ static int z055_write_room(struct tty_struct    *tty)
  * Arguments:       tty pointer to tty info structure
  * Return Value:    None
  */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,14,0)
 static int z055_chars_in_buffer(struct tty_struct *tty)
+#else
+static unsigned int z055_chars_in_buffer(struct tty_struct *tty)
+#endif
 {
 	struct Z055_STRUCT *info    = (struct Z055_STRUCT *)tty->driver_data;
 
