@@ -2921,7 +2921,7 @@ static void __exit z055_hdlc_exit(void)
 				__FUNCTION__, __LINE__, rc);
 
 	printk("%s(%d)\n", __FUNCTION__, __LINE__);
-	put_tty_driver(G_serial_driver);
+	tty_driver_kref_put(G_serial_driver);
 	printk("%s(%d)\n", __FUNCTION__, __LINE__);
 
 	info = G_z055_device_list;
