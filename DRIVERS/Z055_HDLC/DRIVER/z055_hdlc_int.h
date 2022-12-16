@@ -54,11 +54,7 @@
 #define TRUE 1
 #define FALSE 0
 
-#if LINUX_VERSION_CODE < VERSION(3,7,0)
-#define tty_cflags(tty) ((tty)->termios->c_cflag)
-#else
 #define tty_cflags(tty) ((tty)->termios.c_cflag)
-#endif
 
 // RHEL specific changes
 #if defined(RHEL_RELEASE_CODE) && defined(RHEL_RELEASE_VERSION)
@@ -114,17 +110,7 @@ struct Z055_STRUCT {
 	struct Z055_ICOUNT	icount;
 
 	struct termios			normal_termios;
-#if LINUX_VERSION_CODE >= VERSION(2,6,27)
 	struct tty_port port;
-#else
-	struct tty_struct		*tty;
-	int									count;		/* count of opens */
-	unsigned short			close_delay;
-	unsigned short			closing_wait;	/* time to wait before closing */
-	int									blocked_open;	/* # of blocked opens */
-	wait_queue_head_t		open_wait;
-	wait_queue_head_t		close_wait;
-#endif
 
 	int						timeout;
 	int						x_char;		/* xon/xoff character */
@@ -217,8 +203,6 @@ struct Z055_STRUCT {
  * define operators on tty values to decouple driver code from
  * changing value locations of different kernel versions
  */
-
-#if LINUX_VERSION_CODE >= VERSION(2,6,27)
 #define Z055_STRUCT_set_tty(info, a)          ((info)->port.tty = (a))
 #define Z055_STRUCT_get_tty(info)             ((info)->port.tty)
 #define Z055_STRUCT_ref_count(info)           ((info)->port.count)
@@ -229,14 +213,6 @@ struct Z055_STRUCT {
 #define Z055_STRUCT_set_flags(info, a)        ((info)->port.flags |= (a))
 #define Z055_STRUCT_clear_flags(info, a)      ((info)->port.flags &= ~(a))
 #define Z055_STRUCT_open_wait_q(info)         ((info)->port.open_wait)
-#if LINUX_VERSION_CODE < VERSION(4,4,0) && !defined(RHEL_7_3_514)
-#define Z055_STRUCT_close_wait_q(info)               ((info)->port.close_wait)
-#endif
-#if LINUX_VERSION_CODE < VERSION(3,9,0)
-#define Z055_STRUCT_set_low_latency(info, a)  ((info)->port.tty->low_latency = (a))
-#else
-#define Z055_STRUCT_set_low_latency(info, a)  ((info)->port.low_latency = (a))
-#endif
 #define Z055_STRUCT_blocked_open(info)        ((info)->port.blocked_open)
 #define Z055_STRUCT_inc_blocked_open(info)    ((info)->port.blocked_open++)
 #define Z055_STRUCT_dec_blocked_open(info)    ((info)->port.blocked_open--)
@@ -244,33 +220,8 @@ struct Z055_STRUCT {
 #define Z055_STRUCT_set_close_delay(info, a)  ((info)->port.close_delay = (a))
 #define Z055_STRUCT_get_closing_wait(info)    ((info)->port.closing_wait)
 #define Z055_STRUCT_set_closing_wait(info, a) ((info)->port.closing_wait = (a))
-#else
-#define Z055_STRUCT_set_tty(info, a)          ((info)->tty = (a))
-#define Z055_STRUCT_get_tty(info)             ((info)->tty)
-#define Z055_STRUCT_ref_count(info)           ((info)->count)
-#define Z055_STRUCT_set_ref_count(info, a)    ((info)->count = (a))
-#define Z055_STRUCT_inc_ref_count(info)       ((info)->count++)
-#define Z055_STRUCT_dec_ref_count(info)       ((info)->count--)
-#define Z055_STRUCT_flags(info)               ((info)->flags)
-#define Z055_STRUCT_set_flags(info, a)        ((info)->flags |= (a))
-#define Z055_STRUCT_clear_flags(info, a)      ((info)->flags &= ~(a))
-#define Z055_STRUCT_open_wait_q(info)         ((info)->open_wait)
-#define Z055_STRUCT_close_wait_q(info)        ((info)->close_wait)
-#define Z055_STRUCT_set_low_latency(info, a)  ((info)->tty->low_latency = (a))
-#define Z055_STRUCT_blocked_open(info)        ((info)->blocked_open)
-#define Z055_STRUCT_inc_blocked_open(info)    ((info)->blocked_open++)
-#define Z055_STRUCT_dec_blocked_open(info)    ((info)->blocked_open--)
-#define Z055_STRUCT_get_close_delay(info)     ((info)->close_delay)
-#define Z055_STRUCT_set_close_delay(info, a)  ((info)->close_delay = (a))
-#define Z055_STRUCT_get_closing_wait(info)    ((info)->closing_wait)
-#define Z055_STRUCT_set_closing_wait(info, a) ((info)->closing_wait = (a))
-#endif
 
-#if LINUX_VERSION_CODE < VERSION(3,7,0)
-#define tty_cflags(tty) ((tty)->termios->c_cflag)
-#else
 #define tty_cflags(tty) ((tty)->termios.c_cflag)
-#endif
 
 /*
  * These macros define the offsets used in calculating the
