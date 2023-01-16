@@ -83,6 +83,8 @@ int set_broadcmask(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_baudrate(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_four_start_flags(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int clr_four_start_flags(int argc, char* argv[], char* devname, Z055_PARAMS* params);
+int set_half_duplex(int argc, char* argv[], char* devname, Z055_PARAMS* params);
+int clr_half_duplex(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_quiet(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 
 typedef int (*CMD_SET_FUNC)(int argc, char *argv[], char* devname, Z055_PARAMS* params);
@@ -134,6 +136,9 @@ CMD_TABLE_ENTRY cmd_table[] = {
 
 	{"+fourflags",set_four_start_flags},
 	{"-fourflags",clr_four_start_flags},
+
+	{"+halfduplex",set_half_duplex},
+	{"-halfduplex",clr_half_duplex},
 
 	{"quiet",set_quiet},
 };
@@ -273,6 +278,7 @@ void display_usage(char *progName)
 		"stats             display device statistics\n"
 		"baudrate <const>  set baud rate generator constant to const\n"
 		"hdlc              set mode to bit synchronous HDLC (default)\n"
+		"[+/-]halfduplex   en-/disable half duplex mode\n"
 		"[+/-]loopback     set/clear internal loopback mode\n"
 		"[+/-]txctransp    en-/disable transportation of Tx clock on interface\n"
 		"txcrtspin         set Tx clock to be sent on RTS pin\n"
@@ -846,6 +852,18 @@ int clr_four_start_flags(int argc, char* argv[], char* devname, Z055_PARAMS* par
 	params->flags &= ~HDLC_FLAG_FOUR_START_FLAGS;
 	return 1;
 }	/* end of clr_four_start_flags() */
+
+int set_half_duplex(int argc, char* argv[], char* devname, Z055_PARAMS* params)
+{
+	params->half_duplex = HDLC_HALF_DUPLEX;
+	return 1;
+}	/* end of set_half_duplex() */
+
+int clr_half_duplex(int argc, char* argv[], char* devname, Z055_PARAMS* params)
+{
+	params->half_duplex = HDLC_FULL_DUPLEX;
+	return 1;
+}	/* end of clr_half_duplex() */
 
 int set_quiet(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 {
