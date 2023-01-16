@@ -69,6 +69,7 @@ int set_idleflag(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_idlemark(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_nrz(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_nrzi(int argc, char* argv[], char* devname, Z055_PARAMS* params);
+int set_nrzi_s(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 /* int set_fm0(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_fm1(int argc, char* argv[], char* devname, Z055_PARAMS* params);*/
 int set_manch(int argc, char* argv[], char* devname, Z055_PARAMS* params);
@@ -80,6 +81,8 @@ int set_compbroadc(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_addrmask(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_broadcmask(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_baudrate(int argc, char* argv[], char* devname, Z055_PARAMS* params);
+int set_four_start_flags(int argc, char* argv[], char* devname, Z055_PARAMS* params);
+int clr_four_start_flags(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_quiet(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 
 typedef int (*CMD_SET_FUNC)(int argc, char *argv[], char* devname, Z055_PARAMS* params);
@@ -114,6 +117,7 @@ CMD_TABLE_ENTRY cmd_table[] = {
 	{"idleflag",set_idleflag},
 	{"nrz",set_nrz},
 	{"nrzi",set_nrzi},
+	{"nrzi-s",set_nrzi_s},
 /*	{"fm0",set_fm0},
 	{"fm1",set_fm1},
 */
@@ -127,6 +131,9 @@ CMD_TABLE_ENTRY cmd_table[] = {
 	{"compbroadc",set_compbroadc},
 	{"addrmask",set_addrmask},
 	{"broadcmask",set_broadcmask},
+
+	{"+fourflags",set_four_start_flags},
+	{"-fourflags",clr_four_start_flags},
 
 	{"quiet",set_quiet},
 };
@@ -264,7 +271,7 @@ void display_usage(char *progName)
 		"+ or - character to enable or disable the option\n"
 		"\n-== COMMON OPTIONS ==- \n"
 		"stats             display device statistics\n"
-		"baudconst <const> set baud rate generator constant to const\n"
+		"baudrate <const>  set baud rate generator constant to const\n"
 		"hdlc              set mode to bit synchronous HDLC (default)\n"
 		"[+/-]loopback     set/clear internal loopback mode\n"
 		"[+/-]txctransp    en-/disable transportation of Tx clock on interface\n"
@@ -274,16 +281,18 @@ void display_usage(char *progName)
 		"crcccitt          append/check CRC-CCITT on HDLC frames\n"
 		"[+/-]crcinv       en-/disable inversion of crc word before transmit/check\n"
 		"crcpreset <0/1>   preset value for crc calculation (0x00/0xFF)\n"
-		"idleMark          send \"ones\" between frames\n"
-		"idleFlag          send \"flags\" between frames\n"
+		"idlemark          send \"ones\" between frames\n"
+		"idleflag          send \"flags\" between frames\n"
+		"[+/-]fourflags    en-/disable sending of four start flags\n"
 		"nrz               set NRZ encoding algorithm\n"
-		"nrzi              set NRZIencoding algorithm\n"
+		"nrzi              set NRZI-M encoding algorithm\n"
+		"nrzi-s            set NRZI-S encoding algorithm\n"
 #if 0
 		"fm0               set FM1 encoding algorithm\n"
 		"fm1               set FM0 encoding algorithm\n"
 #endif
 		"manch             set Manchester encoding algorithm\n"
-		"manch+nrzi        set Manchester and NRZI combined encoding algorithm\n"
+		"manch+nrzi        set Manchester and NRZI-M combined encoding algorithm\n"
 		"[+/-]addrcomp     enable/disable address search mode\n"
 		"compaddr <addr>   address for HDLC frame compare, hex value (0xFF)\n"
 		"compbroadc <addr> address for HDLC broadcast frame compare, hex value (0xFF)\n"
@@ -340,6 +349,11 @@ void display_params(char *devname, Z055_PARAMS* params)
 	printf( "    send %s between frames\n",
 			(params->flags & HDLC_FLAG_TXIDLE_MARK) ? "ones" : "flags" );
 
+	if( params->flags & HDLC_FLAG_FOUR_START_FLAGS )
+		printf("    sending four start flags\n");
+	else
+		printf("    sending one start flag\n");
+
 	if( params->flags & HDLC_FLAG_ADDRCMP )
 		printf( "    HDLC frame address and broadcast frame address are compared\n"
 				"         frame compare address           = 0x%02x\n"
@@ -362,6 +376,7 @@ void display_params(char *devname, Z055_PARAMS* params)
 #endif
 	case HDLC_ENCODING_MANCHESTER:		str = "Manchester"; break;
 	case HDLC_ENCODING_MANCHESTER_NRZI:	str = "Manchester plus NRZI"; break;
+	case HDLC_ENCODING_NRZI_S:		str = "NRZI-S"; break;
 	default:							str = "unknown";
 	}
 	printf("    encoding = %s\n",str);
@@ -713,6 +728,12 @@ int set_nrzi(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 	return 1;
 }	/* end of set_nrzi() */
 
+int set_nrzi_s(int argc, char* argv[], char* devname, Z055_PARAMS* params)
+{
+	params->encoding = HDLC_ENCODING_NRZI_S;
+	return 1;
+}	/* end of set_nrzi_s() */
+
 #if 0
 int set_fm0(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 {
@@ -753,51 +774,51 @@ int clr_addrcomp(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 
 int set_compaddr(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 {
-	unsigned char cmpaddr = 0;
+	unsigned int cmpaddr = 0;
 
 	if (argc<2 || !sscanf(argv[1],"%x",&cmpaddr)) {
 		printf("\ncompaddr option requires compare address as hex value\n");
 		return -EINVAL;
 	}
-	params->comp_addr = cmpaddr;
+	params->comp_addr = (unsigned char)cmpaddr;
 	params->flags |= HDLC_FLAG_ADDRCMP; /* address search mode gets enabled*/
 	return 2;
 }	/* end of set_compaddr() */
 
 int set_compbroadc(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 {
-	unsigned char cmpbroadc = 0;
+	unsigned int cmpbroadc = 0;
 
 	if (argc<2 || !sscanf(argv[1],"%x",&cmpbroadc)) {
 		printf("\ncompbroadc option requires compare address as hex value\n");
 		return -EINVAL;
 	}
-	params->comp_broadc = cmpbroadc;
+	params->comp_broadc = (unsigned char)cmpbroadc;
 	params->flags |= HDLC_FLAG_ADDRCMP; /* address search mode gets enabled*/
 	return 2;
 }	/* end of set_compbroadc() */
 
 int set_addrmask(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 {
-	unsigned char addrmask = 0;
+	unsigned int addrmask = 0;
 
 	if (argc<2 || !sscanf(argv[1],"%x",&addrmask)) {
 		printf("\naddrmask option requires compare address mask as hex value\n");
 		return -EINVAL;
 	}
-	params->addr_mask = addrmask;
+	params->addr_mask = (unsigned char)addrmask;
 	return 2;
 }	/* end of set_addrmask() */
 
 int set_broadcmask(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 {
-	unsigned char broadcmask = 0;
+	unsigned int broadcmask = 0;
 
 	if (argc<2 || !sscanf(argv[1],"%x",&broadcmask)) {
 		printf("\nbroadcmask option requires compare address mask as hex value\n");
 		return -EINVAL;
 	}
-	params->broadc_mask = broadcmask;
+	params->broadc_mask = (unsigned char)broadcmask;
 	return 2;
 }	/* end of set_broadcmask() */
 
@@ -813,6 +834,18 @@ int set_baudrate(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 	params->baud_rate = brate;
 	return 2;
 }	/* end of set_baudrate() */
+
+int set_four_start_flags(int argc, char* argv[], char* devname, Z055_PARAMS* params)
+{
+	params->flags |= HDLC_FLAG_FOUR_START_FLAGS;
+	return 1;
+}	/* end of set_four_start_flags() */
+
+int clr_four_start_flags(int argc, char* argv[], char* devname, Z055_PARAMS* params)
+{
+	params->flags &= ~HDLC_FLAG_FOUR_START_FLAGS;
+	return 1;
+}	/* end of clr_four_start_flags() */
 
 int set_quiet(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 {
