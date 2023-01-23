@@ -69,7 +69,7 @@ int set_idleflag(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_idlemark(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_nrz(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_nrzi(int argc, char* argv[], char* devname, Z055_PARAMS* params);
-int set_nrzi_s(int argc, char* argv[], char* devname, Z055_PARAMS* params);
+int set_nrz_s(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 /* int set_fm0(int argc, char* argv[], char* devname, Z055_PARAMS* params);
 int set_fm1(int argc, char* argv[], char* devname, Z055_PARAMS* params);*/
 int set_manch(int argc, char* argv[], char* devname, Z055_PARAMS* params);
@@ -119,7 +119,7 @@ CMD_TABLE_ENTRY cmd_table[] = {
 	{"idleflag",set_idleflag},
 	{"nrz",set_nrz},
 	{"nrzi",set_nrzi},
-	{"nrzi-s",set_nrzi_s},
+	{"nrz-s",set_nrz_s},
 /*	{"fm0",set_fm0},
 	{"fm1",set_fm1},
 */
@@ -291,14 +291,14 @@ void display_usage(char *progName)
 		"idleflag          send \"flags\" between frames\n"
 		"[+/-]fourflags    en-/disable sending of four start flags\n"
 		"nrz               set NRZ encoding algorithm\n"
-		"nrzi              set NRZI-M encoding algorithm\n"
-		"nrzi-s            set NRZI-S encoding algorithm\n"
+		"nrzi              set NRZI/NRZ-M encoding algorithm\n"
+		"nrz-s             set NRZ-S encoding algorithm\n"
 #if 0
 		"fm0               set FM1 encoding algorithm\n"
 		"fm1               set FM0 encoding algorithm\n"
 #endif
 		"manch             set Manchester encoding algorithm\n"
-		"manch+nrzi        set Manchester and NRZI-M combined encoding algorithm\n"
+		"manch+nrzi        set Manchester and NRZI/NRZ-M combined encoding algorithm\n"
 		"[+/-]addrcomp     enable/disable address search mode\n"
 		"compaddr <addr>   address for HDLC frame compare, hex value (0xFF)\n"
 		"compbroadc <addr> address for HDLC broadcast frame compare, hex value (0xFF)\n"
@@ -382,7 +382,7 @@ void display_params(char *devname, Z055_PARAMS* params)
 #endif
 	case HDLC_ENCODING_MANCHESTER:		str = "Manchester"; break;
 	case HDLC_ENCODING_MANCHESTER_NRZI:	str = "Manchester plus NRZI"; break;
-	case HDLC_ENCODING_NRZI_S:		str = "NRZI-S"; break;
+	case HDLC_ENCODING_NRZ_S:		str = "NRZ-S"; break;
 	default:							str = "unknown";
 	}
 	printf("    encoding = %s\n",str);
@@ -734,11 +734,11 @@ int set_nrzi(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 	return 1;
 }	/* end of set_nrzi() */
 
-int set_nrzi_s(int argc, char* argv[], char* devname, Z055_PARAMS* params)
+int set_nrz_s(int argc, char* argv[], char* devname, Z055_PARAMS* params)
 {
-	params->encoding = HDLC_ENCODING_NRZI_S;
+	params->encoding = HDLC_ENCODING_NRZ_S;
 	return 1;
-}	/* end of set_nrzi_s() */
+}	/* end of set_nrz_s() */
 
 #if 0
 int set_fm0(int argc, char* argv[], char* devname, Z055_PARAMS* params)

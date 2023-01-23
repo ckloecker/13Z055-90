@@ -2973,7 +2973,7 @@ static void z055_hw_set_sdlc_mode( struct Z055_STRUCT *info )
 	case HDLC_ENCODING_NRZI:            RegValue = Z055_CDR_NRZI;       break;
 	case HDLC_ENCODING_MANCHESTER:      RegValue = Z055_CDR_MAN;        break;
 	case HDLC_ENCODING_MANCHESTER_NRZI: RegValue = Z055_CDR_NRZI_MAN;   break;
-	case HDLC_ENCODING_NRZI_S:          RegValue = Z055_CDR_NRZS;       break;
+	case HDLC_ENCODING_NRZ_S:           RegValue = Z055_CDR_NRZS;       break;
 	default:                            RegValue = Z055_CDR_NRZ;        break;
 	}
 	Z055_OUTREG( info, Z055_CDR, RegValue );
